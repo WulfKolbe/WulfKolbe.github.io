@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+
+
+<html>
+
+<head>
+    <title>iFrame Tester </title>
+    <meta charset="UTF-8" />
+
+    <style>
+        .img-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            /* background: url('./EN57_2205_20200602_060323_SLCred.png');*/
+            background-size: 100%;
+            background-attachment: fixed;
+            background-position: center top;
+            /*  clip-path: circle(300px at center);*/
+        }
+        
+        .text {
+            top: 0;
+            left: 0;
+            width: 500%;
+            height: 100vh;
+        }
+        
+        .graph {
+            top: 0;
+            left: 0;
+            width: 10000px;
+        }
+        /*   background-color: #060012; background-image: url("https://www.transparenttextures.com/patterns/batthern.png"); */
+        /* This is mostly intended for prototyping; please download the pattern and re-host for production environments. Thank you! */
+    </style>
+</head>
+
+<body>
+    <!--div>
+        <iframe id="Grafana" src="https://sensorcloud.ddns.net:3000/d-solo/SM1FD9rGk/ice?orgId=1&from=1481224862392&to=1481488729456&panelId=2" width="2048" height="512" frameborder="0"></iframe>
+</div>-->
+
+
+    <div>
+        <!--iframe
+//	src="http://192.168.2.13:3000/d/_14-cVknk/postgres-tester?tab=queries&orgId=1&from=1532300072306&to=1532388179795&var-cats=physicalMeasurement&var-config_id=856253&var-seg=20001%20%5B%222018-04-20%2002:30:13.92%22,%222018-04-20%2021:56:51.47%22)"
+//  src="http://192.168.2.13:3000/d/_14-cVknk/postgres-tester?tab=queries&orgId=1&edit=true&from=1532063847679&to=1532572602047&var-cats=physicalMeasurement&var-config_id=856253"
+  width="650"
+  height="300"
+  frameborder="0"
+> </iframe-->
+        <!--/div>
+
+    <div>
+        <iframe id="Grafana" src="https://sensorcloud.ddns.net:3000/d-solo/SM1FD9rGk/ice?orgId=1&from=1481224862392&to=1481488729456&panelId=2" width="2048" height="512" frameborder="0"></iframe>
+    </div>
+
+
+    <div>
+        <!--a href="http://192.168.170.146:8887/segments_window.html"  target="_blank"/> open Segments Window </a> </div>
+<div> <a href="http://192.168.170.146:8887/signals_window.html"   target="_blank"/> open Signals Window </a> </div-->
+
+
+        <div id="hallo"><img src='./EN57_2205_20200602_060323_SLCred.png'> </img>
+        </div>
+
+
+
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var imgbg = document.querySelector('.img-bg');
+                console.log("loaded");
+                window.addEventListener('scroll', function(e) {
+                    var value = window.scrollX; // geht nicht Math.max(window.scrollX,window.scrollY);
+                    //  console.log("scroll event",e);
+                    //    imgbg.style.transform = "skew("+ -value*0.1 + "deg, " + value*0.1 + "deg)";
+                    //    imgbg.style.clipPath = "circle(" + value + "px at center)";
+                });
+
+            });
+        </script>
+
+</body>
+
+</html>
