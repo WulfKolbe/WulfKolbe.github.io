@@ -521,7 +521,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
 
     <div class="callout">
       <div class="lab">Sandbox network access</div>
-      <p>Any action that reaches an outside service — <strong>MathPix</strong> (<code>mathpix</code>, <code>snip</code>), <strong>ChatGPT / GPT-4o</strong> (<code>vision</code>), and <strong>Perplexity</strong> (<code>bibfetch</code>) — needs outbound network, which the Claude.ai sandbox blocks by default. Please enable network access (the accessibility setting) for those domains in your <strong>user settings</strong> first. The keyless offline path — <code>model</code>, <code>compare</code>, <code>report</code>, <code>tiddlers</code>, <code>ocr</code> — needs no such change.</p>
+      <p>The Claude.ai sandbox blocks all outbound network by default, so reaching <strong>any host outside the sandbox</strong> must first be <strong>allowed in your user settings</strong>. That covers the external services (<strong>MathPix</strong> — <code>mathpix</code>, <code>snip</code>; <strong>ChatGPT / GPT-4o</strong> — <code>vision</code>; <strong>Perplexity</strong> — <code>bibfetch</code>), fetching a PDF by URL, and even <code>apt</code>-installing <code>dvisvgm</code> at bootstrap. The keyless offline path — <code>model</code>, <code>compare</code>, <code>report</code>, <code>tiddlers</code>, <code>ocr</code> — touches no host and needs no change.</p>
     </div>
 
     <div class="callout teal">
