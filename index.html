@@ -519,6 +519,11 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
       <div class="card"><h4><span class="dot"></span>keyless OCR fallback</h4><p>No MathPix? <code>pdfdrill ocr</code> renders pages → tesseract → a MathPix-compatible <code>lines.json</code> (<code>--lang eng+equ</code> for math, <code>eng+deu</code> for German), and <code>model</code> falls back to it automatically.</p></div>
     </div>
 
+    <div class="callout">
+      <div class="lab">Sandbox network access</div>
+      <p>Any action that reaches an outside service — <strong>MathPix</strong> (<code>mathpix</code>, <code>snip</code>), <strong>ChatGPT / GPT-4o</strong> (<code>vision</code>), and <strong>Perplexity</strong> (<code>bibfetch</code>) — needs outbound network, which the Claude.ai sandbox blocks by default. Please enable network access (the accessibility setting) for those domains in your <strong>user settings</strong> first. The keyless offline path — <code>model</code>, <code>compare</code>, <code>report</code>, <code>tiddlers</code>, <code>ocr</code> — needs no such change.</p>
+    </div>
+
     <div class="callout teal">
       <div class="lab">Upload ≠ enough</div>
       <p>A PDF attached in the chat is silently converted to Markdown (math as Unicode, ~pdfplumber quality) and the original — including its annotation layer — is never consulted. That is exactly why uploads miss annotation-only links. Always run pdfdrill against the <strong>real PDF file</strong>.</p>
