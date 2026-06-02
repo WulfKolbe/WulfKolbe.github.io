@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pdfdrill — shallow-first PDF extraction & OCR quality control</title>
+<meta name="description" content="pdfdrill: a token-economical drill-down PDF toolkit that returns prose, persists state in a sidecar, and runs a LaTeX | KaTeX | MathPix-image quality-control pipeline over scientific PDFs.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+<style>
+:root{
+  --bg:#0c0e11; --bg2:#0f1317; --panel:#15191f; --panel2:#1a1f27;
+  --ink:#e9e4d8; --muted:#8a909b; --faint:#565c67; --line:#262b33; --line2:#323844;
+  --amber:#ff7a18; --amber2:#ffb066; --teal:#54d1c4; --teal-deep:#205f59;
+  --violet:#a795ff; --rose:#ff6b8b; --green:#7fd17a;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --serif:'Spectral',Georgia,serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--serif);font-size:17px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(900px 500px at 88% -8%, rgba(255,122,24,.10), transparent 60%),
+    radial-gradient(700px 600px at -5% 12%, rgba(84,209,196,.07), transparent 55%);
+}
+::selection{background:var(--amber);color:#1a1109}
+a{color:var(--amber2);text-decoration:none}
+a:hover{color:var(--amber)}
+.mono{font-family:var(--mono)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+
+/* grain / scanline atmosphere */
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.025;
+  background-image:repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 3px);
+}
+
+/* ---------- top bar ---------- */
+header.bar{
+  position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
+  background:rgba(12,14,17,.78);border-bottom:1px solid var(--line);
+}
+.bar .wrap{display:flex;align-items:center;gap:22px;height:58px}
+.brand{font-family:var(--mono);font-weight:700;letter-spacing:.06em;font-size:15px;color:var(--ink)}
+.brand b{color:var(--amber)}
+.bar nav{margin-left:auto;display:flex;gap:22px;font-family:var(--mono);font-size:12.5px;letter-spacing:.04em}
+.bar nav a{color:var(--muted)}
+.bar nav a:hover{color:var(--ink)}
+@media(max-width:760px){.bar nav{display:none}}
+
+/* ---------- hero ---------- */
+.hero{position:relative;padding:78px 0 56px;border-bottom:1px solid var(--line)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);margin-bottom:22px}
+h1{font-family:var(--mono);font-weight:700;font-size:clamp(38px,6.4vw,74px);line-height:.98;letter-spacing:-.01em;margin:0 0 8px}
+h1 .drill{color:var(--amber)}
+.lede{font-size:clamp(19px,2.4vw,24px);color:var(--ink);max-width:44ch;margin:18px 0 0;font-weight:300}
+.lede em{color:var(--teal);font-style:normal}
+.hero-meta{margin-top:30px;display:flex;flex-wrap:wrap;gap:10px}
+.pill{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid var(--line2);
+  border-radius:999px;padding:6px 13px;background:var(--panel)}
+.pill b{color:var(--teal);font-weight:500}
+.cta{margin-top:34px;display:flex;flex-wrap:wrap;gap:12px}
+.btn{font-family:var(--mono);font-size:13px;letter-spacing:.03em;padding:12px 18px;border-radius:7px;
+  border:1px solid var(--line2);color:var(--ink);background:var(--panel);transition:.18s;display:inline-flex;gap:9px;align-items:center}
+.btn:hover{border-color:var(--amber);color:var(--ink);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(180deg,#ff8a2e,#f06e0c);border-color:#ff8a2e;color:#1a1008;font-weight:600}
+.btn.primary:hover{filter:brightness(1.07)}
+
+/* strata core-sample on the right of hero */
+.core{position:absolute;right:28px;top:80px;width:84px;bottom:40px;display:none}
+@media(min-width:980px){.core{display:block}}
+.core .seg{position:relative;border:1px solid var(--line2);border-bottom:none;font-family:var(--mono);
+  font-size:9.5px;color:var(--faint);padding:6px 7px;letter-spacing:.06em;overflow:hidden}
+.core .seg:last-child{border-bottom:1px solid var(--line2)}
+.core .seg .n{position:absolute;right:6px;top:5px;color:var(--amber);opacity:.6}
+.core .s0{height:8%;background:repeating-linear-gradient(45deg,#1a1f27,#1a1f27 4px,#181c23 4px,#181c23 8px)}
+.core .s1{height:14%;background:#171b22}
+.core .s2{height:22%;background:#181d25}
+.core .s3{height:56%;background:linear-gradient(180deg,#1a1f27,#13171d)}
+
+/* ---------- sections ---------- */
+section{padding:64px 0;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin:0 0 14px}
+h2{font-family:var(--mono);font-weight:700;font-size:clamp(26px,3.6vw,38px);letter-spacing:-.01em;margin:0 0 8px;line-height:1.05}
+h3{font-family:var(--mono);font-weight:600;font-size:18px;letter-spacing:.01em;margin:30px 0 10px;color:var(--ink)}
+.sub{color:var(--muted);max-width:62ch;font-weight:300;margin:0 0 8px}
+p{max-width:66ch}
+strong{color:var(--ink);font-weight:600}
+code{font-family:var(--mono);font-size:.86em;background:#0a0c0f;border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--amber2)}
+
+/* feature grid */
+.grid{display:grid;gap:18px;margin-top:30px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:820px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:22px}
+.card h4{font-family:var(--mono);font-size:14px;letter-spacing:.02em;margin:0 0 8px;color:var(--ink);display:flex;gap:9px;align-items:center}
+.card h4 .dot{width:8px;height:8px;border-radius:2px;background:var(--amber);flex:none}
+.card p{font-size:15px;color:var(--muted);margin:0;max-width:none}
+.card .ms{font-family:var(--mono);font-size:11px;color:var(--teal);margin-top:12px}
+
+/* terminal */
+.term{background:#070809;border:1px solid var(--line2);border-radius:11px;overflow:hidden;margin:22px 0;
+  box-shadow:0 24px 60px -30px rgba(0,0,0,.8)}
+.term .top{display:flex;align-items:center;gap:7px;padding:11px 15px;background:#0e1115;border-bottom:1px solid var(--line)}
+.term .top i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.term .top .r{background:#ff5f57}.term .top .y{background:#febc2e}.term .top .g{background:#28c840}
+.term .top .ttl{margin-left:10px;font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.05em}
+.term pre{margin:0;padding:18px 18px;font-family:var(--mono);font-size:13px;line-height:1.7;color:#cdd2da;
+  white-space:pre-wrap;word-break:break-word;overflow-x:auto}
+.term pre .pr{color:var(--amber)}        /* prompt */
+.term pre .cm{color:var(--teal)}         /* command */
+.term pre .ar{color:var(--violet)}       /* arg */
+.term pre .ou{color:var(--muted)}        /* output */
+.term pre .hl{color:var(--ink)}
+.term pre .cn{color:var(--faint);font-style:italic} /* comment */
+.term pre .ok{color:var(--green)}
+.term pre .warn{color:var(--rose)}
+
+/* command explorer */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 16px}
+.tab{font-family:var(--mono);font-size:12.5px;letter-spacing:.03em;padding:8px 14px;border-radius:7px;
+  border:1px solid var(--line2);color:var(--muted);background:var(--panel);cursor:pointer;transition:.15s}
+.tab:hover{color:var(--ink)}
+.tab.on{border-color:var(--amber);color:var(--amber);background:rgba(255,122,24,.06)}
+.cmdgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.cmdgrid{grid-template-columns:1fr}}
+.cmd{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:15px 16px;cursor:pointer;transition:.15s}
+.cmd:hover{border-color:var(--line2);background:var(--panel2)}
+.cmd.on{border-color:var(--amber)}
+.cmd .nm{font-family:var(--mono);font-size:13px;color:var(--amber2)}
+.cmd .nm b{color:var(--amber)}
+.cmd .ds{font-size:13.5px;color:var(--muted);margin-top:5px;line-height:1.5}
+.cmd .tag{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--faint);margin-top:8px}
+
+/* QC table */
+.qc{width:100%;border-collapse:collapse;margin-top:22px;font-size:14px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.qc th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-align:left;
+  color:var(--muted);background:var(--panel2);padding:11px 13px;border-bottom:1px solid var(--line2)}
+.qc td{padding:13px;border-bottom:1px solid var(--line);vertical-align:top;background:var(--panel)}
+.qc tr:last-child td{border-bottom:none}
+.qc .src code{display:block;white-space:pre-wrap;word-break:break-all;background:#070809;border-color:var(--line2);
+  color:#cdd2da;font-size:12px;padding:9px 11px}
+.qc .ren{color:var(--ink)}
+.qc .img img{max-width:240px;max-height:70px;border:1px solid var(--line2);border-radius:5px;background:#fff;padding:3px}
+.qc .img .miss{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.scorebar{display:flex;align-items:center;gap:8px;margin-top:7px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.scorebar .track{flex:1;height:5px;border-radius:3px;background:#0a0c0f;overflow:hidden;max-width:120px}
+.scorebar .fill{height:100%;background:linear-gradient(90deg,var(--teal-deep),var(--teal))}
+
+/* math gallery */
+.mgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:24px}
+@media(max-width:820px){.mgrid{grid-template-columns:1fr}}
+.mcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.mcard .id{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.04em}
+.mcard .id b{color:var(--amber)}
+.mcard .eq{margin:10px 0 8px;color:var(--ink);overflow-x:auto}
+.mcard .tex{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:pre-wrap;word-break:break-all;
+  background:#070809;border:1px solid var(--line);border-radius:5px;padding:7px 9px}
+
+/* model anatomy */
+.anat{display:grid;grid-template-columns:1.1fr 1fr;gap:26px;align-items:start;margin-top:26px}
+@media(max-width:860px){.anat{grid-template-columns:1fr}}
+.types{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.types .t{font-family:var(--mono);font-size:11.5px;border:1px solid var(--line);border-radius:6px;
+  padding:7px 9px;color:var(--muted);background:var(--panel)}
+.types .t b{color:var(--teal)}
+.json{background:#070809;border:1px solid var(--line2);border-radius:10px;padding:16px;overflow-x:auto}
+.json pre{margin:0;font-family:var(--mono);font-size:12px;line-height:1.6;color:#cdd2da;white-space:pre}
+.json .k{color:var(--teal)}.json .s{color:var(--amber2)}.json .n{color:var(--violet)}.json .p{color:var(--faint)}
+
+/* callout */
+.callout{border-left:3px solid var(--amber);background:linear-gradient(90deg,rgba(255,122,24,.07),transparent 70%);
+  padding:18px 22px;border-radius:0 10px 10px 0;margin:24px 0}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);margin-bottom:6px}
+.callout p{margin:0;font-size:16px}
+.callout.teal{border-color:var(--teal);background:linear-gradient(90deg,rgba(84,209,196,.07),transparent 70%)}
+.callout.teal .lab{color:var(--teal)}
+
+/* ladder */
+.ladder{margin-top:26px;display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.rung{display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+.rung:last-child{border-bottom:none}
+.rung .lv{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--amber);letter-spacing:.04em}
+.rung .lv small{display:block;color:var(--faint);font-weight:400;font-size:10px;letter-spacing:.1em;margin-top:3px}
+.rung .desc{font-size:15px;color:var(--ink)}
+.rung .desc code{font-size:.82em}
+.rung .desc span{color:var(--muted)}
+.rung .cost{font-family:var(--mono);font-size:12px;color:var(--teal);white-space:nowrap}
+.rung.d0{box-shadow:inset 4px 0 0 var(--teal)}
+.rung.d3{box-shadow:inset 4px 0 0 var(--amber)}
+
+/* footer artifacts */
+.arts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:26px}
+@media(max-width:760px){.arts{grid-template-columns:1fr}}
+.art{display:block;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:24px;transition:.18s}
+.art:hover{border-color:var(--amber);transform:translateY(-2px)}
+.art .ic{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--amber);text-transform:uppercase}
+.art h4{font-family:var(--mono);font-size:18px;color:var(--ink);margin:10px 0 6px}
+.art p{font-size:14px;color:var(--muted);margin:0}
+.art .go{font-family:var(--mono);font-size:12px;color:var(--teal);margin-top:14px;display:inline-block}
+
+footer{padding:46px 0 70px;color:var(--faint);font-family:var(--mono);font-size:12px}
+footer a{color:var(--muted)}
+footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:center}
+
+.fade{opacity:0;transform:translateY(14px);transition:opacity .7s ease,transform .7s ease}
+.fade.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <span class="brand"><b>pdf</b>drill</span>
+    <nav>
+      <a href="#what">what</a>
+      <a href="#invisible">invisible link</a>
+      <a href="#depth">drill depth</a>
+      <a href="#commands">commands</a>
+      <a href="#qc">qc pipeline</a>
+      <a href="#model">model</a>
+      <a href="#sandbox">sandbox</a>
+      <a href="#artifacts">artifacts</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="wrap">
+    <div class="core" aria-hidden="true">
+      <div class="seg s0"><span class="n">0</span>size · links</div>
+      <div class="seg s1"><span class="n">1</span>abstract · toc</div>
+      <div class="seg s2"><span class="n">2</span>md · page</div>
+      <div class="seg s3"><span class="n">3</span>model · compare · report</div>
+    </div>
+    <div class="kicker">drill-down extraction · pdf→latex ocr quality control</div>
+    <h1>Drill into a PDF<br>with the <span class="drill">cheapest</span><br>sufficient command.</h1>
+    <p class="lede">A flat CLI that starts <em>shallow</em>, returns <em>prose</em> (never JSON), and remembers what it already knows in a sidecar next to each PDF — paired with a unified document model that turns MathPix <code>lines.json</code> into a typed, queryable graph.</p>
+    <div class="hero-meta">
+      <span class="pill"><b>Python 3</b> · no Bun on the live path</span>
+      <span class="pill">poppler · pdfplumber · MathPix · Perplexity</span>
+      <span class="pill"><b>offline</b> structural path · no key needed</span>
+      <span class="pill">runs in the Claude.ai sandbox</span>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/WulfKolbe/pdfdrill" target="_blank" rel="noopener">⎇ pdfdrill repository</a>
+      <a class="btn" href="#qc">↳ see the QC pipeline</a>
+      <a class="btn" href="2004.05631v1.html">◳ browse a live document model</a>
+    </div>
+  </div>
+</div>
+
+<!-- WHAT -->
+<section id="what">
+  <div class="wrap">
+    <p class="eyebrow">01 — what it is</p>
+    <h2>Two predecessors, one toolchain.</h2>
+    <p class="sub">pdfdrill merges a low-level PDF drill-down toolkit with a unified document-object model. The CLI is the surface an LLM drives directly; underneath, the model is the persistent memory that survives between calls — building toward a self-learning loop that optimizes the extraction toolchain from accumulated quality scores.</p>
+    <div class="grid g3">
+      <div class="card">
+        <h4><span class="dot"></span>src/pdfdrill</h4>
+        <p>The flat CLI + sidecar state machine + capture layer. Wraps poppler &amp; pdfplumber so you never call them by hand. Every command returns one sentence of prose and records cumulative <em>facts</em> — re-runs return instantly.</p>
+        <div class="ms">→ the SKILL the web chatbot drives</div>
+      </div>
+      <div class="card">
+        <h4><span class="dot"></span>src/docmodel</h4>
+        <p>The typed <code>Document</code>: <code>DocObject</code>s with anchor-based <code>Stream</code>s, <code>Realization</code>s across streams, <code>Alignment</code>s between them, and <code>Region</code> geometry. MathPix <code>lines.json</code> is the only format that lets you compare a LaTeX string against the image MathPix actually rendered.</p>
+        <div class="ms">→ the between-call memory</div>
+      </div>
+      <div class="card">
+        <h4><span class="dot"></span>src/docops</h4>
+        <p>Operators over a <code>Document</code>: <em>Mutators</em> modify in place (dehyphenate, Stanza NLP), <em>Projectors</em> emit artifacts — plaintext, LLM-compact markdown, TiddlyWiki tiddlers, the comparison table, and the full formula report.</p>
+        <div class="ms">→ where artifacts come from</div>
+      </div>
+    </div>
+    <div class="callout">
+      <div class="lab">Design principle</div>
+      <p>Anchors are <strong>opaque identities, not positions</strong> — inserts and deletes in one stream never invalidate references elsewhere. Source streams stay immutable; modules only <em>add</em> objects, realizations, and alignments. The raw MathPix payload is always recoverable verbatim.</p>
+    </div>
+  </div>
+</section>
+
+<!-- INVISIBLE LINK -->
+<section id="invisible">
+  <div class="wrap">
+    <p class="eyebrow">02 — the killer case</p>
+    <h2>The link that no text stream can see.</h2>
+    <p class="sub">A paper's page-1 text says only <em>“Our code is available <span style="color:var(--amber)">here</span>.”</em> — where <em>here</em> is a hyperlink with no separate anchor text. Plain extraction, MathPix Markdown, and a chatbot PDF upload all drop the annotation layer, so the URL simply <strong>does not exist</strong> in anything an LLM reads. <code>pdfdrill links</code> reads the annotation layer directly and surfaces it in ~50&nbsp;ms.</p>
+
+    <div class="term">
+      <div class="top"><i class="r"></i><i class="y"></i><i class="g"></i><span class="ttl">~/papers — finding an anonymized code release on a NeurIPS submission</span></div>
+<pre><span class="pr">$</span> <span class="cm">pdfdrill</span> <span class="ar">links</span> 2605.12061.pdf            <span class="cn"># ~0.06 s · pure `pdfinfo -url`</span>
+<span class="ou">Found 1 code/data host among external links:</span>
+  <span class="hl">https://anonymous.4open.science/r/Unified-Representation-A9D9/</span>  <span class="ou">(page 1, no visible anchor text)</span>
+
+<span class="pr">$</span> <span class="cm">pdfdrill</span> <span class="ar">urls</span> 2605.12061.pdf             <span class="cn"># ~6 s · pdfplumber over every page to recover anchor text</span>
+<span class="ou">Same link re-derived — only reach for this when you need the visible text.</span>
+
+<span class="pr">$</span> <span class="cn"># MathPix / Markdown / chatbot upload:</span> <span class="warn">the link is gone — annotation layer never consulted.</span></pre>
+    </div>
+
+    <div class="callout teal">
+      <div class="lab">Reach for the cheapest sufficient tool</div>
+      <p><code>links</code> answers “where is the code?” in 50&nbsp;ms by reading the annotation layer. <code>urls</code> re-derives the same answer in ~6&nbsp;s. A MathPix pass <strong>misses it entirely</strong>. Powerful ≠ right — escalate only when a cheaper command genuinely can’t answer.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DRILL DEPTH -->
+<section id="depth">
+  <div class="wrap">
+    <p class="eyebrow">03 — drill depth</p>
+    <h2>Start shallow. Escalate only on demand.</h2>
+    <p class="sub">Every command records facts in the sidecar, so a higher level never repeats a lower one. <code>pdfdrill size</code> is always step zero — free, ~40&nbsp;ms, and it tells you whether the auto-extracted text is even enough.</p>
+    <div class="ladder">
+      <div class="rung d0">
+        <div class="lv">L0<small>FREE</small></div>
+        <div class="desc"><code>size</code> · <code>pdfinfo</code> · <code>links</code> · <code>dests</code> — <span>metadata, text-layer vs. scanned, annotation-layer URLs, named anchors. No extraction.</span></div>
+        <div class="cost">~40–60 ms</div>
+      </div>
+      <div class="rung">
+        <div class="lv">L1<small>CHEAP</small></div>
+        <div class="desc"><code>abstract</code> · <code>toc</code> · <code>fonts</code> — <span>“what is this about / what are the sections / is there math?” Usually all you need.</span></div>
+        <div class="cost">cached, ~ms</div>
+      </div>
+      <div class="rung">
+        <div class="lv">L2<small>WORK</small></div>
+        <div class="desc"><code>md</code> · <code>page N</code> · <code>drill</code> — <span>real extraction. Full Markdown to the sidecar, a single page, or chained size→fonts→abstract→toc→md.</span></div>
+        <div class="cost">~1 s</div>
+      </div>
+      <div class="rung d3">
+        <div class="lv">L3<small>MODEL</small></div>
+        <div class="desc"><code>model</code> · <code>compare</code> · <code>report</code> · <code>tiddlers</code> — <span>the unified docmodel + QC artifacts. Offline from an existing <code>lines.json</code>.</span></div>
+        <div class="cost">offline</div>
+      </div>
+    </div>
+
+    <div class="term">
+      <div class="top"><i class="r"></i><i class="y"></i><i class="g"></i><span class="ttl">~/papers — “what is this paper about?” → two subprocess calls, no extraction</span></div>
+<pre><span class="pr">$</span> <span class="cm">pdfdrill</span> <span class="ar">size</span> paper.pdf
+<span class="ou">18-page PDF, 0.2 MB, letter, produced by xdvipdfmx, has a text layer, not encrypted.</span>
+
+<span class="pr">$</span> <span class="cm">pdfdrill</span> <span class="ar">abstract</span> paper.pdf
+<span class="ou">Abstract:</span>
+
+<span class="ou">  For a finite planar set P, let ν(P) be the number of …</span></pre>
+    </div>
+    <div class="callout">
+      <div class="lab">Scan detection</div>
+      <p><code>size</code> probes the text layer at L0: a born-digital PDF has extractable text on page 1 <em>and</em> fonts; a scan has neither. Page-1 char count is authoritative (a stray stamp font won’t flip an image PDF to “has text”). When there’s no text layer it says <strong>“NO text layer — scanned, OCR required”</strong> and sets <code>needs_ocr</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COMMANDS -->
+<section id="commands">
+  <div class="wrap">
+    <p class="eyebrow">04 — command catalogue</p>
+    <h2>One flat verb per job.</h2>
+    <p class="sub">Run as <code>PYTHONPATH=src python3 -m pdfdrill &lt;command&gt; &lt;pdf&gt; [args]</code>, or via the installed <code>pdfdrill</code> console script. Click a command to see what it returns.</p>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="cmdgrid" id="cmdgrid"></div>
+
+    <div class="term" style="margin-top:18px">
+      <div class="top"><i class="r"></i><i class="y"></i><i class="g"></i><span class="ttl" id="outTtl">selected command — prose return</span></div>
+      <pre id="outPre"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- QC PIPELINE -->
+<section id="qc">
+  <div class="wrap">
+    <p class="eyebrow">05 — the qc pipeline</p>
+    <h2>LaTeX · KaTeX · the image MathPix actually rendered.</h2>
+    <p class="sub">MathPix <code>lines.json</code> is the only format that ships, for each equation, both the recognized LaTeX <strong>and</strong> the CDN crop it was read from. pdfdrill puts them side by side — and adds competing readings (MathPix Snip, an LLM on the crop, the author’s own <code>.tex</code>) as extra columns, each scored against a normalized LaTeX form. Below is a real row from <code>report --embed</code> on arXiv 2004.05631v1, eq&nbsp;(1.1):</p>
+
+    <table class="qc">
+      <thead><tr><th style="width:30%">LaTeX source</th><th style="width:34%">KaTeX render</th><th style="width:36%">MathPix CDN crop</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="src">
+            <code>a(x):=\{y \in Y \mid R(x, y)=1\}
+\quad b(y):=\{x \in X \mid R(x, y)=1\}</code>
+            <div class="scorebar"><span>snip 1.00</span><span class="track"><span class="fill" style="width:100%"></span></span></div>
+            <div class="scorebar"><span>tex&nbsp;&nbsp;0.99</span><span class="track"><span class="fill" style="width:99%"></span></span></div>
+          </td>
+          <td class="ren"><span class="kk" data-tex="a(x):=\{y \in Y \mid R(x, y)=1\} \quad b(y):=\{x \in X \mid R(x, y)=1\}" data-display="true"></span></td>
+          <td class="img">
+            <a href="https://cdn.mathpix.com/cropped/abab828b-61e2-4095-ac03-1e28612cc14a-012.jpg" target="_blank" rel="noopener" title="full page 12">
+              <img loading="lazy" alt="MathPix crop of eq (1.1)" src="https://cdn.mathpix.com/cropped/abab828b-61e2-4095-ac03-1e28612cc14a-012.jpg?height=67&width=994&top_left_y=666&top_left_x=259"
+                   onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+              <span class="miss" style="display:none">crop URL · region 994×67 @ (259,666) · click → full page 12</span>
+            </a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:22px" class="sub">Each crop’s <code>&lt;img&gt;</code> links to the <strong>full page</strong> it was cut from (<code>page_url()</code> strips the region query). <code>--embed</code> base64-inlines every crop so the artifact has no live-CDN dependency — ideal for a preview that won’t load remote images. The page click-through stays live even when embedded.</p>
+
+    <div class="grid g3" style="margin-top:8px">
+      <div class="card"><h4><span class="dot"></span>snip</h4><p><code>pdfdrill snip</code> re-OCRs each crop through MathPix Snip <code>/v3/text</code> → a candidate LaTeX + a per-line <code>confidence</code> that becomes a score signal.</p></div>
+      <div class="card"><h4><span class="dot"></span>vision / candidates</h4><p><code>candidates</code> exports the crops for an LLM to read (no API key); <code>vision</code> runs GPT-4o over them. Both attach as extra <code>provenance</code> columns.</p></div>
+      <div class="card"><h4><span class="dot"></span>tex (gold)</h4><p><code>pdfdrill latex</code> aligns the author’s e-print <code>.tex</code> to each MathPix equation — the gold reference versus OCR, preamble-expanded so TikZ/macros resolve.</p></div>
+    </div>
+
+    <div class="callout teal">
+      <div class="lab">Closed loop</div>
+      <p>Scoring flags shaky equations; <code>escalate</code> exports only those for a second reading; after <code>ingest</code>, <code>relearn</code> re-scores and reports <em>resolved / improved / still-shaky</em>. On 2605.12061: <strong>9 flagged → 7 resolved, 1 retained</strong> (the hardest multi-line equation, correctly kept).</p>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE MATH -->
+<section id="math">
+  <div class="wrap">
+    <p class="eyebrow">06 — live from the model</p>
+    <h2>Real equations, rendered in your browser.</h2>
+    <p class="sub">These are pulled verbatim from the extracted model of arXiv&nbsp;2004.05631v1 (<em>At the Interface of Algebra and Statistics</em>) — the Galois connection at the heart of the thesis. Source LaTeX shown beneath each render; nothing was hand-typed.</p>
+    <div class="mgrid" id="mathGallery"></div>
+  </div>
+</section>
+
+<!-- MODEL / TIDDLERS -->
+<section id="model">
+  <div class="wrap">
+    <p class="eyebrow">07 — the document model</p>
+    <h2>Every element is a typed, queryable node.</h2>
+    <p class="sub">The unified <code>docmodel</code> resolves a paper into typed <code>DocObject</code>s. Projected to TiddlyWiki, each becomes one tiddler — equations carry their LaTeX, reference number, page, the MathPix crop, region geometry, and every competing reading as <code>latex_&lt;provenance&gt;</code> + <code>score_&lt;provenance&gt;</code>.</p>
+
+    <div class="anat">
+      <div>
+        <h3>Tiddler types in one extracted thesis</h3>
+        <div class="types">
+          <div class="t"><b>1116</b> formula (inline)</div>
+          <div class="t"><b>254</b> equation (display)</div>
+          <div class="t"><b>574</b> paragraph</div>
+          <div class="t"><b>137</b> diagram</div>
+          <div class="t"><b>135</b> page</div>
+          <div class="t"><b>134</b> sidenote</div>
+          <div class="t"><b>71</b> listitem</div>
+          <div class="t"><b>57</b> section</div>
+          <div class="t"><b>13</b> footnote</div>
+          <div class="t"><b>12</b> table</div>
+          <div class="t"><b>—</b> reference / bibentry</div>
+          <div class="t"><b>2618</b> tiddlers total</div>
+        </div>
+        <p style="margin-top:18px;font-size:15px;color:var(--muted)">In-text <code>(N)</code> references rewrite to <code>{{&lt;eq&gt;||FREF}}</code> transclusions; citations link straight to their bibliographic tiddler by number or citekey. The persisted <code>model.docmodel.json</code> is the complex memory that survives between LLM/tool calls.</p>
+      </div>
+      <div>
+        <h3>One equation tiddler, verbatim</h3>
+        <div class="json"><pre><span class="p">{</span>
+  <span class="k">"title"</span>: <span class="s">"2004.05631v1_EQ0001_p012"</span>,
+  <span class="k">"text"</span>:  <span class="s">"&lt;$latex text={{!!latex}} displayMode=true /&gt;"</span>,
+  <span class="k">"tags"</span>:  <span class="s">"equation 2004.05631v1"</span>,
+  <span class="k">"kind"</span>:  <span class="s">"Equation"</span>,
+  <span class="k">"latex"</span>: <span class="s">"a(x):=\{y \in Y \mid R(x,y)=1\} …"</span>,
+  <span class="k">"refnum"</span>:          <span class="s">"1.1"</span>,
+  <span class="k">"equation_number"</span>: <span class="s">"(1.1)"</span>,
+  <span class="k">"page"</span>:   <span class="s">"012"</span>,
+  <span class="k">"canonical_uri"</span>: <span class="s">"https://cdn.mathpix.com/cropped/…-012.jpg?…"</span>,
+  <span class="k">"width"</span>: <span class="s">"994"</span>, <span class="k">"height"</span>: <span class="s">"67"</span>,
+  <span class="k">"top_left_x"</span>: <span class="s">"259"</span>, <span class="k">"top_left_y"</span>: <span class="s">"666"</span>,
+  <span class="k">"latex_tex"</span>:  <span class="s">"a(x):=\{y\in Y\mid R(x,y)=1\}…"</span>,
+  <span class="k">"score_tex"</span>:  <span class="n">"0.992"</span>,
+  <span class="k">"latex_snip"</span>: <span class="s">"a(x):=\{y \in Y \mid …\}"</span>,
+  <span class="k">"score_snip"</span>: <span class="n">"1"</span>
+<span class="p">}</span></pre></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="lab">Why TiddlyWiki</div>
+      <p>It’s a single self-contained HTML file — no server, perfect for GitHub Pages — that holds the whole graph and renders the LaTeX widgets live through the KaTeX plugin. The artifact below is exactly that: <code>pdfdrill tiddlers</code> output, built into a real wiki you can open and explore.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SANDBOX -->
+<section id="sandbox">
+  <div class="wrap">
+    <p class="eyebrow">08 — the claude.ai sandbox</p>
+    <h2>Install-free, inside a chat.</h2>
+    <p class="sub">The whole live path is Python 3 — that was the accessibility requirement for the Claude.ai web sandbox, which already ships poppler-utils, pdfplumber and pydantic. The package root is <code>src/</code>, so nothing needs installing to test the function layer.</p>
+
+    <div class="term">
+      <div class="top"><i class="r"></i><i class="y"></i><i class="g"></i><span class="ttl">claude.ai sandbox — upload the bundle, run with PYTHONPATH=src</span></div>
+<pre><span class="cn"># on your machine — tracked files only, keys bundled for private use</span>
+<span class="pr">$</span> <span class="cm">git archive</span> --format=tar.gz -o /tmp/pdfdrill.tgz HEAD
+
+<span class="cn"># in the chat, after attaching pdfdrill.tgz:</span>
+<span class="pr">$</span> <span class="cm">tar</span> xzf pdfdrill.tgz && <span class="cm">cd</span> pdfdrill
+<span class="pr">$</span> <span class="cm">PYTHONPATH=src python3</span> -m pdfdrill <span class="ar">size</span>  paper.pdf
+<span class="pr">$</span> <span class="cm">PYTHONPATH=src python3</span> -m pdfdrill <span class="ar">model</span> paper.pdf      <span class="cn"># offline if lines.json exists</span>
+<span class="pr">$</span> <span class="cm">PYTHONPATH=src python3</span> -m pdfdrill <span class="ar">report</span> paper.pdf <span class="ar">--embed</span>   <span class="ok"># → self-contained formula-report.html</span></pre>
+    </div>
+
+    <div class="grid g3">
+      <div class="card"><h4><span class="dot"></span>keys from the environment</h4><p><code>mathpix</code>, <code>snip</code>, <code>bibfetch</code> read <code>MATHPIX_APP_ID/KEY</code> &amp; <code>PERPLEXITY_API_KEY</code> from env or a git-ignored <code>.env</code> — never committed, never asked for mid-task.</p></div>
+      <div class="card"><h4><span class="dot"></span>offline by default</h4><p>The structural path — <code>model</code>, <code>compare</code>, <code>report</code>, <code>tiddlers</code>, <code>folder</code>, <code>latex</code> — runs entirely from an existing <code>lines.json</code>. No key, no network.</p></div>
+      <div class="card"><h4><span class="dot"></span>keyless OCR fallback</h4><p>No MathPix? <code>pdfdrill ocr</code> renders pages → tesseract → a MathPix-compatible <code>lines.json</code> (<code>--lang eng+equ</code> for math, <code>eng+deu</code> for German), and <code>model</code> falls back to it automatically.</p></div>
+    </div>
+
+    <div class="callout teal">
+      <div class="lab">Upload ≠ enough</div>
+      <p>A PDF attached in the chat is silently converted to Markdown (math as Unicode, ~pdfplumber quality) and the original — including its annotation layer — is never consulted. That is exactly why uploads miss annotation-only links. Always run pdfdrill against the <strong>real PDF file</strong>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ARTIFACTS -->
+<section id="artifacts" style="border-bottom:none">
+  <div class="wrap">
+    <p class="eyebrow">09 — live artifacts</p>
+    <h2>Open the real output.</h2>
+    <p class="sub">Both of these were produced by pdfdrill from arXiv 2004.05631v1 and are served straight from this repository — no build step, no server.</p>
+    <div class="arts">
+      <a class="art" href="2004.05631v1.html">
+        <div class="ic">◳ tiddlywiki · 2618 tiddlers</div>
+        <h4>The document model, browsable</h4>
+        <p>A self-hosted TiddlyWiki with the KaTeX plugin carrying the complete extracted structure — sections, equations, formulas, sidenotes, footnotes, references. Click any equation to see its full record and live render.</p>
+        <span class="go">open the wiki →</span>
+      </a>
+      <a class="art" href="formula-report.html">
+        <div class="ic">⊞ formula report · 1116 + 254</div>
+        <h4>The KaTeX × MathPix comparison</h4>
+        <p>The full <code>pdfdrill report</code>: every inline formula and display equation as LaTeX source │ live KaTeX render │ the MathPix CDN crop, each linking back to its full page.</p>
+        <span class="go">open the report →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span><b style="color:var(--amber)">pdf</b>drill — token-economical drill-down extraction + PDF→LaTeX OCR quality control.</span>
+      <span><a href="https://github.com/WulfKolbe/pdfdrill" target="_blank" rel="noopener">github.com/WulfKolbe/pdfdrill</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ---------- command catalogue data (real prose returns) ---------- */
+const CMDS = {
+  introspection: [
+    {n:"size", a:"&lt;pdf&gt;", d:"One sentence: pages, MB, producer, <b>text-layer vs. scanned</b>, encrypted? Sets needs_ocr.", tag:"L0 · ~40 ms · always step zero",
+     out:[["$","pdfdrill ","size"," paper.pdf"],["ou","18-page PDF, 0.2 MB, letter, produced by xdvipdfmx, has a text layer, not encrypted."]]},
+    {n:"links", a:"&lt;pdf&gt;", d:"<b>FAST</b> external URLs via <code>pdfinfo -url</code>; flags code/data hosts (github, 4open.science, zenodo, huggingface…).", tag:"L0 · ~50 ms · reads the annotation layer",
+     out:[["$","pdfdrill ","links"," 2605.12061.pdf"],["ou","Found 1 code/data host:"],["hl","  https://anonymous.4open.science/r/Unified-Representation-A9D9/  (page 1, no visible anchor text)"]]},
+    {n:"dests", a:"&lt;pdf&gt;", d:"Named destinations: theorem / equation / section anchors — structure without the full Markdown pipeline.", tag:"L0 · powerful for math papers",
+     out:[["$","pdfdrill ","dests"," paper.pdf"],["ou","42 named anchors: theorem.3.1, equation.12, section.4, lemma.2.2, …"]]},
+    {n:"fonts", a:"&lt;pdf&gt;", d:"One sentence: font count + math-font detection (predicts whether pdfplumber will see math).", tag:"L1 · cached",
+     out:[["$","pdfdrill ","fonts"," paper.pdf"],["ou","Uses 21 font families including math fonts (LMMathSymbols10, MSBM10)."],["ou","pdfplumber extraction will detect math expressions."]]},
+    {n:"abstract", a:"&lt;pdf&gt;", d:"Abstract paragraph verbatim, or “not found”. Usually all you need for “what is this about?”.", tag:"L1 · cheap",
+     out:[["$","pdfdrill ","abstract"," paper.pdf"],["ou","Abstract:"],["ou",""],["ou","  For a finite planar set P, let ν(P) be the number of …"]]},
+    {n:"toc", a:"&lt;pdf&gt;", d:"Bulleted section list, or “not found”.", tag:"L1 · cheap",
+     out:[["$","pdfdrill ","toc"," paper.pdf"],["ou","• 1  Introduction"],["ou","• 2  The Galois connection"],["ou","• 3  A probability distribution …"]]},
+    {n:"status", a:"&lt;pdf&gt;", d:"What pdfdrill already knows about this PDF — the accumulated sidecar facts.", tag:"L0 · the memory",
+     out:[["$","pdfdrill ","status"," paper.pdf"],["ou","For paper.pdf I have: size (18 pages), font analysis (math fonts), abstract, Markdown (9175 words)."],["ou","Last action: md. 6 transitions logged."]]},
+  ],
+  extraction: [
+    {n:"md", a:"&lt;pdf&gt;", d:"Summary sentence + stores full Markdown in the sidecar (auto-chains size→fonts→md).", tag:"L2 · ~1 s",
+     out:[["$","pdfdrill ","md"," paper.pdf"],["ou","Extracted 9175 words across 18 pages. 925 inline, 128 display math, 130 refs."]]},
+    {n:"page", a:"&lt;pdf&gt; N", d:"Full text of page N — cheaper than a full <code>md</code> when you want one page.", tag:"L2 · one pdftotext call",
+     out:[["$","pdfdrill ","page"," paper.pdf ","7"],["ou","Page 7 of 18 (576 words, 49 lines):"],["ou",""],["ou","  [full text of page 7] …"]]},
+    {n:"mathpix", a:"&lt;pdf&gt;", d:"Download MathPix OCR (<code>lines.json</code>, <code>md</code>, <code>tex.zip</code>) next to the PDF. Idempotent; <code>--force</code> re-uploads.", tag:"network · key from env",
+     out:[["$","pdfdrill ","mathpix"," paper.pdf"],["ou","MathPix OCR complete → paper.lines.json (254 equations, 1116 inline). This is the input to the comparison pipeline."]]},
+    {n:"ocr", a:"&lt;pdf&gt; --lang eng+equ", d:"<b>MathPix-free</b> input: render → tesseract → a MathPix-compatible <code>lines.json</code>. Plain text only.", tag:"keyless fallback",
+     out:[["$","pdfdrill ","ocr"," paper.pdf ","--lang eng+equ"],["ou","Rendered 18 pages → tesseract → paper.lines.json (source: tesseract, 69 lines on p1). model will ingest it unchanged."]]},
+    {n:"folder", a:"./papers", d:"Batch-build every PDF that already has a sibling <code>lines.json</code> — no network, no uploads.", tag:"offline batch",
+     out:[["$","pdfdrill ","folder"," ./papers"],["ou","Built 2312.11532 (full model, 24 author-year cites, 2 algorithms). Skipped 2605 copy (no lines.json)."]]},
+  ],
+  "math qc": [
+    {n:"model", a:"&lt;pdf&gt;", d:"Build the unified docmodel <code>Document</code> from <code>lines.json</code>. Falls back to <code>ocr</code> when MathPix is unavailable.", tag:"L3 · offline",
+     out:[["$","pdfdrill ","model"," paper.pdf"],["ou","Built docmodel: 254 equations, 1116 formulas, 57 sections, 574 paragraphs. All 254 equation numbers matched."]]},
+    {n:"compare", a:"&lt;pdf&gt; --embed", d:"Emit <code>compare.html</code>: one row per equation, a LaTeX+KaTeX pair per provenance, plus the MathPix image.", tag:"L3 · QC artifact",
+     out:[["$","pdfdrill ","compare"," paper.pdf ","--embed"],["ou","compare.html: 254 equations, mean agreement 0.992, 9 flagged. Snip column present (mean confidence 0.90)."]]},
+    {n:"report", a:"&lt;pdf&gt; --embed", d:"Emit <code>formula-report.html</code>: <b>every</b> inline formula + display equation, LaTeX │ KaTeX │ crop.", tag:"L3 · the grounded artifact",
+     out:[["$","pdfdrill ","report"," paper.pdf ","--embed"],["ou","formula-report.html: 1116 inline + 254 display. Self-contained (crops base64-inlined); page links stay live."]]},
+    {n:"snip", a:"&lt;pdf&gt; --limit N", d:"OCR each equation crop via MathPix Snip → a <code>snip</code> column (LaTeX + confidence as a score).", tag:"competing provenance",
+     out:[["$","pdfdrill ","snip"," paper.pdf ","--limit 12"],["ou","Snipped 12 crops (mean confidence 0.90). Attached as provenance=snip latex_candidate realizations."]]},
+    {n:"vision", a:"&lt;pdf&gt;", d:"GPT-4o reads every CDN crop — equations, diagrams, and CDN links left inside table cells.", tag:"openai provenance",
+     out:[["$","pdfdrill ","vision"," paper.pdf"],["ou","109 crops read (28 tables). The p20 invoice crop → a full 7-row tabular. Attached as provenance=openai."]]},
+    {n:"score", a:"&lt;pdf&gt;", d:"Per-equation quality metrics: agreement across readings + Snip confidence → flags.", tag:"phase 2",
+     out:[["$","pdfdrill ","score"," paper.pdf"],["ou","Mean agreement 0.992. 9 flagged (mostly low snip confidence — surfaced even when LaTeX agrees)."]]},
+    {n:"escalate→relearn", a:"&lt;pdf&gt;", d:"Export only flagged equations for a second reading; after <code>ingest</code>, re-score and report.", tag:"phase 3 · closed loop",
+     out:[["$","pdfdrill ","escalate"," paper.pdf"],["ou","9 flagged exported → (LLM reads crops) → ingest → "],["ok","relearn: 7 resolved, 1 still flagged (hardest multi-line eq, correctly retained)."]]},
+    {n:"tiddlers", a:"&lt;pdf&gt; --embed", d:"Emit a TiddlyWiki tiddler array — equations carry latex, refnum, crop + competing readings.", tag:"L3 · graph artifact",
+     out:[["$","pdfdrill ","tiddlers"," paper.pdf"],["ou","Emitted 2618 tiddlers. Drive a <$list>+<$latex>+<$image> table; --embed inlines canonical_uri as data: URIs."]]},
+  ]
+};
+
+/* render command explorer */
+const tabsEl=document.getElementById('tabs'), gridEl=document.getElementById('cmdgrid');
+const outPre=document.getElementById('outPre'), outTtl=document.getElementById('outTtl');
+const cats=Object.keys(CMDS);
+let curCat=cats[0], curCmd=0;
+
+function renderOut(cmd){
+  outTtl.textContent = "pdfdrill "+cmd.n.replace(/&lt;.*/,'').trim()+" — prose return";
+  let html="";
+  for(const [cls,...rest] of cmd.out){
+    if(cls==="$"){ html+='<span class="pr">$</span> <span class="cm">'+rest[0]+'</span><span class="ar">'+rest[1]+'</span>'+(rest[2]?('<span class="hl">'+rest[2]+'</span>'):'')+'\n'; }
+    else { html+='<span class="'+cls+'">'+(rest[0]||' ')+'</span>\n'; }
+  }
+  outPre.innerHTML=html;
+}
+function renderGrid(){
+  gridEl.innerHTML="";
+  CMDS[curCat].forEach((c,i)=>{
+    const d=document.createElement('div');
+    d.className='cmd'+(i===curCmd?' on':'');
+    d.innerHTML='<div class="nm"><b>pdfdrill</b> '+c.n+' '+(c.a||'')+'</div><div class="ds">'+c.d+'</div><div class="tag">'+c.tag+'</div>';
+    d.onclick=()=>{ curCmd=i; renderGrid(); renderOut(c); };
+    gridEl.appendChild(d);
+  });
+}
+cats.forEach((cat,i)=>{
+  const t=document.createElement('div');
+  t.className='tab'+(i===0?' on':''); t.textContent=cat;
+  t.onclick=()=>{ curCat=cat; curCmd=0; [...tabsEl.children].forEach(x=>x.classList.remove('on')); t.classList.add('on'); renderGrid(); renderOut(CMDS[cat][0]); };
+  tabsEl.appendChild(t);
+});
+renderGrid(); renderOut(CMDS[curCat][0]);
+
+/* ---------- live math gallery (real latex from the model) ---------- */
+const GAL=[
+  ["EQ0001 (1.1)","a(x):=\\{y \\in Y \\mid R(x, y)=1\\} \\quad b(y):=\\{x \\in X \\mid R(x, y)=1\\}"],
+  ["EQ0002 (1.2)","f(A):=\\bigcap_{x \\in A} a(x)."],
+  ["EQ0003 (1.3)","g(B):=\\bigcap_{y \\in B} b(y)"],
+  ["EQ0004 (1.4)","A \\subseteq g(B) \\quad \\text{ if and only if } \\quad B \\subseteq f(A)"],
+  ["EQ0006 p13","\\begin{aligned} R(\\text{orange, fruit}) &=1 \\\\ R(\\text{green, fruit}) &=1 \\\\ R(\\text{purple, vegetable}) &=1 \\end{aligned}"],
+  ["FO0016 inline","f: 2^{X} \\rightarrow 2^{Y}"],
+];
+const gal=document.getElementById('mathGallery');
+GAL.forEach(([id,tex])=>{
+  const c=document.createElement('div'); c.className='mcard';
+  c.innerHTML='<div class="id"><b>2004.05631v1_'+id.split(' ')[0]+'</b> '+(id.split(' ').slice(1).join(' '))+'</div>'
+    +'<div class="eq kk" data-tex="'+tex.replace(/"/g,'&quot;')+'" data-display="true"></div>'
+    +'<div class="tex">'+tex.replace(/\\/g,'\\').replace(/</g,'&lt;')+'</div>';
+  gal.appendChild(c);
+});
+
+/* ---------- KaTeX render + scroll reveal ---------- */
+window.addEventListener('DOMContentLoaded',()=>{
+  function renderKatex(){
+    if(!window.katex){ return setTimeout(renderKatex,60); }
+    document.querySelectorAll('.kk').forEach(el=>{
+      try{ katex.render(el.getAttribute('data-tex'), el, {displayMode: el.getAttribute('data-display')==='true', throwOnError:false}); }
+      catch(e){ el.textContent=el.getAttribute('data-tex'); }
+    });
+  }
+  renderKatex();
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
+  document.querySelectorAll('section .wrap > *').forEach((el,i)=>{ el.classList.add('fade'); el.style.transitionDelay=(Math.min(i,4)*40)+'ms'; io.observe(el); });
+});
+</script>
+</body>
+</html>
