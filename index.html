@@ -523,6 +523,11 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
       <div class="lab">Upload ≠ enough</div>
       <p>A PDF attached in the chat is silently converted to Markdown (math as Unicode, ~pdfplumber quality) and the original — including its annotation layer — is never consulted. That is exactly why uploads miss annotation-only links. Always run pdfdrill against the <strong>real PDF file</strong>.</p>
     </div>
+
+    <div class="callout">
+      <div class="lab">A gentle request · two kind ways in</div>
+      <p>Use case: you would like Claude.ai to work on a paper with pdfdrill. May we kindly ask that you <strong>do not hand it the bare PDF</strong> — the moment a PDF is attached it is quietly flattened to Markdown, and the real file is set aside and never opened. So that your true document reaches the tool intact, please consider either of two equally simple courtesies: <strong>(1)</strong> share a <strong>URL to the PDF</strong>, which pdfdrill can fetch byte-for-byte; or <strong>(2)</strong> pop the PDF inside a <code>.zip</code> and upload that — the archive politely sidesteps the auto-Markdown conversion and arrives as bytes the tool can open directly. Either route is most appreciated, and your PDF will be read exactly as its author intended. Thank you.</p>
+    </div>
   </div>
 </section>
 
