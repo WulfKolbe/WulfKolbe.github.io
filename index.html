@@ -246,7 +246,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
     </div>
     <div class="kicker">drill-down extraction · pdf→latex ocr quality control</div>
     <h1>Drill into a PDF<br>with the <span class="drill">cheapest</span><br>sufficient command.</h1>
-    <p class="lede">A flat CLI that starts <em>shallow</em>, returns <em>prose</em> (never JSON), and remembers what it already knows in a sidecar next to each PDF — paired with a unified document model that turns MathPix <code>lines.json</code> into a typed, queryable graph.</p>
+    <p class="lede">A flat CLI that starts <em>shallow</em>, returns <em>prose</em> (never JSON), and remembers what it already knows in a sidecar next to each PDF — paired with a unified document model that takes a MathPix&trade; <code>lines.json</code> as its input and turns it into a typed, queryable graph.</p>
     <div class="hero-meta">
       <span class="pill"><b>Python 3</b> · no Bun on the live path</span>
       <span class="pill">poppler · pdfplumber · MathPix · Perplexity</span>
@@ -504,7 +504,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
 <span class="cn"># in the chat, after attaching pdfdrill.tgz:</span>
 <span class="pr">$</span> <span class="cm">tar</span> xzf pdfdrill.tgz && <span class="cm">cd</span> pdfdrill
 <span class="pr">$</span> <span class="cm">PYTHONPATH=src python3</span> -m pdfdrill <span class="ar">size</span>  paper.pdf
-<span class="pr">$</span> <span class="cm">PYTHONPATH=src python3</span> -m pdfdrill <span class="ar">model</span> paper.pdf      <span class="cn"># offline if lines.json exists</span>
+<span class="pr">$</span> <span class="cm">PYTHONPATH=src python3</span> -m pdfdrill <span class="ar">model</span> paper.pdf      <span class="cn"># input: paper.lines.json — offline if it exists</span>
 <span class="pr">$</span> <span class="cm">PYTHONPATH=src python3</span> -m pdfdrill <span class="ar">report</span> paper.pdf <span class="ar">--embed</span>   <span class="ok"># → self-contained formula-report.html</span></pre>
     </div>
 
