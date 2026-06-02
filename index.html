@@ -417,6 +417,11 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
       <div class="card"><h4><span class="dot"></span>tex (gold)</h4><p><code>pdfdrill latex</code> aligns the author’s e-print <code>.tex</code> to each MathPix equation — the gold reference versus OCR, preamble-expanded so TikZ/macros resolve.</p></div>
     </div>
 
+    <div class="callout">
+      <div class="lab">Experimental · LaTeX render path</div>
+      <p>A test input path renders tables straight from LaTeX rather than KaTeX: <code>latex</code> → DVI → <code>dvisvgm</code> emits a font-faithful vector <strong>SVG</strong> that drops into the HTML table — useful for full <code>tabular</code> layouts KaTeX can’t express. It needs a local TeX toolchain (<code>latex</code> + <code>dvisvgm</code>) installed, so it runs off the keyless path, not in the web sandbox.</p>
+    </div>
+
     <div class="callout teal">
       <div class="lab">Closed loop</div>
       <p>Scoring flags shaky equations; <code>escalate</code> exports only those for a second reading; after <code>ingest</code>, <code>relearn</code> re-scores and reports <em>resolved / improved / still-shaky</em>. On 2605.12061: <strong>9 flagged → 7 resolved, 1 retained</strong> (the hardest multi-line equation, correctly kept).</p>
