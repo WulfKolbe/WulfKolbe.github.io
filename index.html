@@ -419,7 +419,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
 
     <div class="callout">
       <div class="lab">Experimental · LaTeX render path</div>
-      <p>A test input path renders tables straight from LaTeX rather than KaTeX: <code>latex</code> → DVI → <code>dvisvgm</code> emits a font-faithful vector <strong>SVG</strong> that drops into the HTML table — useful for full <code>tabular</code> layouts KaTeX can’t express. It needs a local TeX toolchain (<code>latex</code> + <code>dvisvgm</code>) installed, so it runs off the keyless path, not in the web sandbox.</p>
+      <p>A test input path renders tables straight from LaTeX rather than KaTeX: <code>latex</code> → DVI → <code>dvisvgm</code> emits a font-faithful vector <strong>SVG</strong> that drops into the HTML table — useful for full <code>tabular</code> layouts KaTeX can’t express. It stays keyless: <code>latex</code> already ships in the Claude.ai sandbox and <code>dvisvgm</code> (3.2.1) is apt-installed by the bootstrap, so it runs there as readily as on a local machine.</p>
     </div>
 
     <div class="callout teal">
