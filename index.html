@@ -324,6 +324,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
       <div class="lab">Reach for the cheapest sufficient tool</div>
       <p><code>links</code> answers “where is the code?” in 50&nbsp;ms by reading the annotation layer. <code>urls</code> re-derives the same answer in ~6&nbsp;s. A MathPix pass <strong>misses it entirely</strong>. Powerful ≠ right — escalate only when a cheaper command genuinely can’t answer.</p>
     </div>
+    <figure style="margin:30px 0 0">
+      <img src="layer1-pdf-document.png" loading="lazy" alt="Layer 1 — the PDF document: text, the annotation layer, and named-destination markers a plain text dump never sees." style="width:100%;height:auto;display:block;border:1px solid rgba(255,122,24,.35);border-radius:12px;background:var(--bg2);box-shadow:0 0 0 1px rgba(255,122,24,.10),0 0 28px rgba(255,122,24,.16)">
+      <figcaption style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:10px;text-align:center">Layer 1 — the PDF as it really is: the annotation layer and named-destination markers a text stream can’t see.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -370,6 +374,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
       <div class="lab">Scan detection</div>
       <p><code>size</code> probes the text layer at L0: a born-digital PDF has extractable text on page 1 <em>and</em> fonts; a scan has neither. Page-1 char count is authoritative (a stray stamp font won’t flip an image PDF to “has text”). When there’s no text layer it says <strong>“NO text layer — scanned, OCR required”</strong> and sets <code>needs_ocr</code>.</p>
     </div>
+    <figure style="margin:30px 0 0">
+      <img src="layer2-probe.png" loading="lazy" alt="Layer 0 probe: size, fonts, links and named destinations read in about 50 ms, before any extraction." style="width:100%;height:auto;display:block;border:1px solid rgba(255,122,24,.35);border-radius:12px;background:var(--bg2);box-shadow:0 0 0 1px rgba(255,122,24,.10),0 0 28px rgba(255,122,24,.16)">
+      <figcaption style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:10px;text-align:center">Layer 0 — probe: size · fonts · links · dests, and text-layer-vs-scan, in ~50 ms before any extraction.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -387,6 +395,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
       <div class="top"><i class="r"></i><i class="y"></i><i class="g"></i><span class="ttl" id="outTtl">selected command — prose return</span></div>
       <pre id="outPre"></pre>
     </div>
+    <figure style="margin:30px 0 0">
+      <img src="layer3-structure.png" loading="lazy" alt="Layers 1-2 structure: abstract, Markdown, facts, math and code-fences lifted from the page." style="width:100%;height:auto;display:block;border:1px solid rgba(255,122,24,.35);border-radius:12px;background:var(--bg2);box-shadow:0 0 0 1px rgba(255,122,24,.10),0 0 28px rgba(255,122,24,.16)">
+      <figcaption style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:10px;text-align:center">Layers 1–2 — structure: abstract, Markdown, facts, math and code-fences pulled from the page.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -436,6 +448,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
       <div class="lab">Closed loop</div>
       <p>Scoring flags shaky equations; <code>escalate</code> exports only those for a second reading; after <code>ingest</code>, <code>relearn</code> re-scores and reports <em>resolved / improved / still-shaky</em>. On 2605.12061: <strong>9 flagged → 7 resolved, 1 retained</strong> (the hardest multi-line equation, correctly kept).</p>
     </div>
+    <figure style="margin:30px 0 0">
+      <img src="layer5-provenance.png" loading="lazy" alt="Layer 5 provenance: MathPix, Snip, vision and the author's gold .tex scored side by side as competing readings." style="width:100%;height:auto;display:block;border:1px solid rgba(255,122,24,.35);border-radius:12px;background:var(--bg2);box-shadow:0 0 0 1px rgba(255,122,24,.10),0 0 28px rgba(255,122,24,.16)">
+      <figcaption style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:10px;text-align:center">Layer 5 — drill · provenance: mathpix · snip · vision · the author’s gold <code>.tex</code>, each a scored column.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -446,6 +462,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
     <h2>Real equations, rendered in your browser.</h2>
     <p class="sub">These are pulled verbatim from the extracted model of arXiv&nbsp;2004.05631v1 (<em>At the Interface of Algebra and Statistics</em>) — the Galois connection at the heart of the thesis. Source LaTeX shown beneath each render; nothing was hand-typed.</p>
     <div class="mgrid" id="mathGallery"></div>
+    <figure style="margin:30px 0 0">
+      <img src="layer7-qc-report.png" loading="lazy" alt="Layer 7 QC report: each row LaTeX vs KaTeX render vs page image, with per-equation score chips and a flag." style="width:100%;height:auto;display:block;border:1px solid rgba(255,122,24,.35);border-radius:12px;background:var(--bg2);box-shadow:0 0 0 1px rgba(255,122,24,.10),0 0 28px rgba(255,122,24,.16)">
+      <figcaption style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:10px;text-align:center">Layer 7 — QC · report: LaTeX │ KaTeX │ image per equation, with score chips and review flags.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -501,6 +521,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
       <div class="lab">Why TiddlyWiki</div>
       <p>It’s a single self-contained HTML file — no server, perfect for GitHub Pages — that holds the whole graph and renders the LaTeX widgets live through the KaTeX plugin. The artifact below is exactly that: <code>pdfdrill tiddlers</code> output, built into a real wiki you can open and explore.</p>
     </div>
+    <figure style="margin:30px 0 0">
+      <img src="layer4-model.png" loading="lazy" alt="Layer 3 model: typed nodes with text and region streams, alignments between them, and region geometry, persisted as docmodel.json." style="width:100%;height:auto;display:block;border:1px solid rgba(255,122,24,.35);border-radius:12px;background:var(--bg2);box-shadow:0 0 0 1px rgba(255,122,24,.10),0 0 28px rgba(255,122,24,.16)">
+      <figcaption style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:10px;text-align:center">Layer 4 — the L3 model: typed nodes, text/region streams, alignments and region geometry → <code>docmodel.json</code>.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -636,6 +660,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;a
         <span class="go">download the json →</span>
       </a>
     </div>
+    <figure style="margin:30px 0 0">
+      <img src="layer6-project.png" loading="lazy" alt="Layer 6 projection: a projector turns each model node into one tiddler, assembled into a self-contained browser/HTML wiki." style="width:100%;height:auto;display:block;border:1px solid rgba(255,122,24,.35);border-radius:12px;background:var(--bg2);box-shadow:0 0 0 1px rgba(255,122,24,.10),0 0 28px rgba(255,122,24,.16)">
+      <figcaption style="font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:10px;text-align:center">Layer 6 — project: one model node → one tiddler → a single self-contained browser/HTML wiki.</figcaption>
+    </figure>
   </div>
 </section>
 
