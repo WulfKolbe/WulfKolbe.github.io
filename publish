@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+# Build the single-file wiki, commit everything, and push it to GitHub Pages.
+#
+#   ./publish                     build, commit with a generated message, push
+#   ./publish -m "Add foo notes"  ...with your own message
+#   ./publish --no-push           build and commit only
+#   ./publish --wait              push, then poll until Pages finishes building
+set -e
+cd "$(dirname "$0")"
+
+# Pages serves this branch's root; a commit anywhere else builds nothing.
+PAGES_BRANCH=master
+
+message=""
+do_push=1
+do_wait=0
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-m | --message) message="$2"; shift 2 ;;
+		-n | --no-push) do_push=0; shift ;;
+		--wait) do_wait=1; shift ;;
+		-h | --help) sed -n '2,7p' "$0" | cut -c3-; exit 0 ;;
+		*) echo "publish: unknown option $1 (try --help)" >&2; exit 2 ;;
+	esac
+done
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo DETACHED)
+if [ "$branch" != "$PAGES_BRANCH" ]; then
+	echo "publish: on '$branch', but Pages serves '$PAGES_BRANCH' -- nothing would go live." >&2
+	exit 1
+fi
+
+./build
+
+# GitHub warns past 50MB per file and refuses the push outright at 100MB, and
+# every publish stores a whole fresh copy of index.html in history. Catch that
+# here rather than halfway through a push.
+# GitHub's thresholds are MiB: it warns past 50 MiB and hard-rejects at 100 MiB.
+# stat's flags differ between GNU and BSD, hence the fallback.
+size=$(stat -c %s index.html 2>/dev/null || stat -f %z index.html)
+mib=$((size / 1048576))
+if [ "$size" -gt 99614720 ] && [ "${PUBLISH_ALLOW_HUGE:-0}" != 1 ]; then
+	echo "publish: index.html is ${mib} MiB -- GitHub rejects files over 100 MiB." >&2
+	echo "publish: move images out of the wiki, or see the externalimages note in CLAUDE.md." >&2
+	echo "publish: set PUBLISH_ALLOW_HUGE=1 to try anyway." >&2
+	exit 1
+elif [ "$size" -gt 52428800 ]; then
+	echo "publish: warning -- index.html is ${mib} MiB, past GitHub's 50 MiB warning line." >&2
+fi
+
+git add -A
+
+# Describe the change by the tiddlers it touched; that is what a wiki commit
+# is actually about, and index.html moves on every single build regardless.
+summarize() {
+	local names count
+	# strip the directory, the .tid suffix, and undo the $__ filename encoding
+	names=$(git diff --cached --name-only --diff-filter=ACMRD -- 'wiki/tiddlers/*.tid' |
+		sed 's|.*/||; s|\.tid$||; s|^\$__|$:/|')
+
+	# An empty list must short-circuit here: letting it reach the arithmetic
+	# below yields nonsense like "and -3 more".
+	if [ -z "$names" ]; then
+		echo "Update site"
+		return
+	fi
+	count=$(printf '%s\n' "$names" | wc -l)
+
+	# paste -sd takes a *cycling* list of delimiters, so ', ' would alternate
+	# comma and space; join on commas and space them out afterwards.
+	join() { paste -sd, | sed 's/,/, /g'; }
+	if [ "$count" -le 3 ]; then
+		echo "Update wiki: $(printf '%s\n' "$names" | join)"
+	else
+		echo "Update wiki: $(printf '%s\n' "$names" | head -3 | join) and $((count - 3)) more"
+	fi
+}
+
+if git diff --cached --quiet; then
+	echo "publish: no changes to commit"
+else
+	git commit -q -m "${message:-$(summarize)}"
+	echo "publish: committed $(git log -1 --format='%h %s')"
+fi
+
+[ "$do_push" -eq 1 ] || { echo "publish: --no-push, stopping here"; exit 0; }
+
+# Fetch before counting, or a stale origin ref gives a wrong answer. Failure
+# here is not fatal -- being offline should still let git produce its own error.
+git fetch -q origin "$PAGES_BRANCH" 2>/dev/null || echo "publish: could not reach origin, trying anyway" >&2
+
+# A rejected push mid-script is confusing; say plainly what to do instead.
+if [ "$(git rev-list --count "HEAD..origin/$PAGES_BRANCH" 2>/dev/null || echo 0)" -ne 0 ]; then
+	echo "publish: origin/$PAGES_BRANCH has commits you don't -- run 'git pull --rebase' first" >&2
+	exit 1
+fi
+
+ahead=$(git rev-list --count "origin/$PAGES_BRANCH..HEAD" 2>/dev/null || echo 0)
+if [ "$ahead" -eq 0 ]; then
+	echo "publish: nothing to push, already up to date"
+	exit 0
+fi
+
+git push -q origin "$PAGES_BRANCH"
+echo "publish: pushed $ahead commit(s) to origin/$PAGES_BRANCH"
+
+[ "$do_wait" -eq 1 ] || { echo "publish: https://wulfkolbe.github.io/ updates in a minute or so"; exit 0; }
+
+if ! command -v gh >/dev/null 2>&1; then
+	echo "publish: --wait needs the gh CLI; skipping the build check" >&2
+	exit 0
+fi
+
+# The push already succeeded by this point, so a failure to *observe* the build
+# must not fail the script -- that would misreport a publish that actually worked.
+if ! repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null); then
+	echo "publish: can't identify the GitHub repo; skipping the build check" >&2
+	exit 0
+fi
+echo "publish: waiting for the Pages build..."
+for _ in $(seq 60); do
+	status=$(gh api "repos/$repo/pages" --jq .status 2>/dev/null || echo unknown)
+	case "$status" in
+		built) echo "publish: live at https://wulfkolbe.github.io/"; exit 0 ;;
+		errored) gh api "repos/$repo/pages/builds/latest" --jq '.error.message' >&2; exit 1 ;;
+	esac
+	sleep 5
+done
+echo "publish: still building after 5 minutes; check the Actions tab" >&2

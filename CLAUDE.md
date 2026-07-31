@@ -19,6 +19,7 @@ So: edit `wiki/tiddlers/`, then rebuild. Never edit `index.html`.
 ./setup          # vendor bun into .bun/, install node + python deps (idempotent)
 ./serve          # TiddlyWiki node server on http://127.0.0.1:8080 (PORT=… to override)
 ./build          # render wiki/ → index.html at the repo root
+./publish        # build + commit everything + push to GitHub Pages
 ```
 
 A fresh clone needs **no** global toolchain — `./serve` and `./build` both run `./setup` first if `.bun/bin/bun` or `node_modules/tiddlywiki` is missing, so cloning and running `./build` is enough. There is no lint or test tooling; do not invent commands for these.
@@ -28,6 +29,25 @@ Everything runs through the **vendored** `.bun/bin/bun`, never a system bun, so 
 The editing loop is: run `./serve`, edit in the browser, and the **filesystem plugin writes each change straight back to `wiki/tiddlers/*.tid`** as you save — no export step, no manual file juggling. When you're happy, `./build` and commit both the changed `.tid` files and the regenerated `index.html`.
 
 Both scripts invoke TiddlyWiki through **bun** (`bun node_modules/tiddlywiki/tiddlywiki.js`) rather than the `tiddlywiki` bin stub, which would pick up system node instead.
+
+## Publishing (`publish`)
+
+`./publish` is the one-shot path to production: it runs `./build`, `git add -A`, commits, and pushes. Flags: `-m "msg"` for your own message, `--no-push` to stop after committing, `--wait` to poll the Pages API until the build finishes.
+
+The generated commit message names the **tiddlers** that changed (`Update wiki: HelloThere, MarkdownExample and 3 more`), not the files. `index.html` moves on every single build, so listing files would say the same uninformative thing every time; the tiddler names are the actual content of the change.
+
+Guards worth knowing, because each exists for a failure that has a confusing symptom:
+
+- **Refuses to run off `master`.** Pages serves that branch's root, so a commit anywhere else builds nothing and looks like a silent no-op.
+- **Refuses when `origin/master` has commits you don't**, telling you to `git pull --rebase`, rather than letting git reject the push with a wall of text. Your local commit is already made at that point and is not lost.
+- **Checks `index.html` against GitHub's file-size limits** — see below.
+- **A failure to observe the Pages build never fails the script.** By the time `--wait` runs, the push has already succeeded; exiting non-zero there would report a publish that actually worked as broken.
+
+## Image weight — the thing most likely to bite
+
+Images imported into the wiki are base64-embedded into `index.html`, so it grows fast: it went from 3.6 MB to 38 MB when the first batch of images landed. **GitHub warns past 50 MiB per file and hard-rejects at 100 MiB**, and because every publish stores a whole fresh copy, the git history grows by the full file size on each one.
+
+`publish` warns past 50 MiB and refuses past 95 MiB (override with `PUBLISH_ALLOW_HUGE=1`). When that limit gets close, the fix is TiddlyWiki's **external images** approach rather than deleting content: `--savetiddlers [is[image]] images` writes the images out as ordinary files and `--setfield [is[image]] _canonical_uri …` points the tiddlers at them, leaving `index.html` small and letting Pages serve the images as separate static files. The `empty` edition bundled in `node_modules/tiddlywiki/editions/empty/tiddlywiki.info` has a working `externalimages` target to copy from — note it renders `$:/core/save/all`, which would need swapping for the tiddlyweb offline template used here.
 
 ## The vendored toolchain (`setup`)
 
