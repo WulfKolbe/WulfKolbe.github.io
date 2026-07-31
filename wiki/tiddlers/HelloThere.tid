@@ -1,0 +1,15 @@
+created: 20260731000000000
+modified: 20260731000000000
+tags: 
+title: HelloThere
+type: text/vnd.tiddlywiki
+
+This wiki is edited locally with `./serve` and published as a single file by `./build`.
+
+! Plugin smoke test
+
+KaTeX renders inline maths like $e^{i\pi} + 1 = 0$ and display maths:
+
+$$\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}$$
+
+Markdown tiddlers work too — see [[MarkdownExample]].

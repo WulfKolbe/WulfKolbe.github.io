@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Start the TiddlyWiki node server. Edits in the browser are written straight
+# back into wiki/tiddlers/ as .tid files by the filesystem plugin.
+set -e
+cd "$(dirname "$0")"
+exec bun node_modules/tiddlywiki/tiddlywiki.js wiki \
+	--listen host=127.0.0.1 port="${PORT:-8080}"

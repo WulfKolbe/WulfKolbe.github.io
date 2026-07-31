@@ -1,0 +1,11 @@
+{
+  "name": "wulfkolbe-github-io",
+  "private": true,
+  "scripts": {
+    "serve": "./serve",
+    "build": "./build"
+  },
+  "dependencies": {
+    "tiddlywiki": "^5.4.1"
+  }
+}

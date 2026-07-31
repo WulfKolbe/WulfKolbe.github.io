@@ -1,0 +1,13 @@
+created: 20260731000000000
+modified: 20260731000000000
+title: MarkdownExample
+type: text/markdown
+
+## A Markdown tiddler
+
+Set `type` to `text/markdown` and the markdown plugin takes over:
+
+- lists
+- **bold**, *italic*, `code`
+
+> Blockquotes render as expected.
