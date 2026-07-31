@@ -1,6 +1,6 @@
 ## Main use case
-Please note that intention is to enlarge the function of the Claude.ai skill "reading a pdf" and therefore all components are developed to run inside Claude.ai sandbox. The sandbox has already installed a lot of tools. The project is a spin-off from my research related to "Conceptual Spaces (CSP)" and understanding of mathematical and scientific documents. I
-
+Please note that the original intention was to enlarge the function of the Claude.ai skill "reading a pdf" and therefore all components are developed to run inside Claude.ai sandbox. The sandbox has already installed a lot of tools.
+ 
 ## Code generation by Claude.ai / CLI 
 Unfortunately the Claude CLI and Claude.ai deviated from my plans and took of into Python to generate the complete project. Only the drillui_bridge is a bun based Typescript web page. I have never touched the code myself. {{Gemini_Generated_Image_n0eqp8n0eqp8n0eq.png}}
 My task was only to shout and scream at the constantly cheating Claude CLI's and do provide some test data.
