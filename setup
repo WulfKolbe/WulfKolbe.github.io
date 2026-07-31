@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Make a fresh clone runnable: vendor bun into .bun/, install node and python
+# deps. Safe to re-run; each step is skipped if it is already satisfied.
+set -e
+cd "$(dirname "$0")"
+
+BUN=.bun/bin/bun
+
+# Pinned so every clone resolves the same lockfile. Bumping this is a commit:
+# change it, run ./setup and `.bun/bin/bun install`, commit the new bun.lockb.
+BUN_VERSION="${BUN_VERSION:-1.3.14}"
+
+# The official bun install script edits your shell rc files. We only want a
+# binary in a known place, so fetch the release archive directly instead.
+target_triple() {
+	local os arch
+	os=$(uname -s)
+	arch=$(uname -m)
+	case "$os-$arch" in
+		Linux-x86_64) echo "bun-linux-x64" ;;
+		Linux-aarch64 | Linux-arm64) echo "bun-linux-aarch64" ;;
+		Darwin-x86_64) echo "bun-darwin-x64" ;;
+		Darwin-arm64) echo "bun-darwin-aarch64" ;;
+		*) return 1 ;;
+	esac
+}
+
+install_bun() {
+	local triple url tmp
+	if ! triple=$(target_triple); then
+		echo "setup: no bun build for $(uname -s)/$(uname -m)" >&2
+		echo "setup: install bun yourself and symlink it to $BUN" >&2
+		exit 1
+	fi
+
+	if [ "$BUN_VERSION" = latest ]; then
+		url="https://github.com/oven-sh/bun/releases/latest/download/$triple.zip"
+	else
+		url="https://github.com/oven-sh/bun/releases/download/bun-v$BUN_VERSION/$triple.zip"
+	fi
+
+	tmp=$(mktemp -d)
+	trap 'rm -rf "$tmp"' RETURN
+	echo "setup: fetching $triple"
+	curl -fsSL "$url" -o "$tmp/bun.zip"
+	unzip -qo "$tmp/bun.zip" -d "$tmp"
+	mkdir -p .bun/bin
+	mv "$tmp/$triple/bun" "$BUN"
+	chmod +x "$BUN"
+
+	# Pre-AVX2 machines get SIGILL from the standard build; bun ships a
+	# "baseline" variant for exactly that case.
+	if ! "$BUN" --version >/dev/null 2>&1 && [ "${triple#*-x64}" != "$triple" ]; then
+		echo "setup: retrying with the baseline build"
+		curl -fsSL "${url%.zip}-baseline.zip" -o "$tmp/bun.zip"
+		unzip -qo "$tmp/bun.zip" -d "$tmp"
+		mv "$tmp/$triple-baseline/bun" "$BUN"
+		chmod +x "$BUN"
+	fi
+}
+
+[ -x "$BUN" ] || install_bun
+echo "setup: bun $("$BUN" --version) at $BUN"
+
+[ -d node_modules/tiddlywiki ] || "$BUN" install
+
+# Python side is optional -- the wiki builds without it, only scripts/ needs it.
+if [ ! -x .venv/bin/python ]; then
+	if command -v uv >/dev/null 2>&1; then
+		uv sync
+	elif command -v python3 >/dev/null 2>&1; then
+		echo "setup: uv not found, falling back to venv + pip"
+		python3 -m venv .venv
+		.venv/bin/pip install --quiet --upgrade pip
+		.venv/bin/pip install --quiet "bibtexparser~=1.4"
+	else
+		echo "setup: no uv or python3; scripts/ will be unavailable" >&2
+	fi
+fi
+
+echo "setup: ready -- ./serve to edit, ./build to publish"

@@ -16,17 +16,26 @@ So: edit `wiki/tiddlers/`, then rebuild. Never edit `index.html`.
 ## Commands
 
 ```bash
+./setup          # vendor bun into .bun/, install node + python deps (idempotent)
 ./serve          # TiddlyWiki node server on http://127.0.0.1:8080 (PORT=… to override)
 ./build          # render wiki/ → index.html at the repo root
-bun install      # restore node_modules/ after a fresh clone
-uv sync          # restore .venv/ for the Python scripts
 ```
 
-`bun run serve` / `bun run build` are equivalent aliases. There is no lint or test tooling — do not invent commands for these.
+A fresh clone needs **no** global toolchain — `./serve` and `./build` both run `./setup` first if `.bun/bin/bun` or `node_modules/tiddlywiki` is missing, so cloning and running `./build` is enough. There is no lint or test tooling; do not invent commands for these.
+
+Everything runs through the **vendored** `.bun/bin/bun`, never a system bun, so the toolchain is identical everywhere the repo is cloned.
 
 The editing loop is: run `./serve`, edit in the browser, and the **filesystem plugin writes each change straight back to `wiki/tiddlers/*.tid`** as you save — no export step, no manual file juggling. When you're happy, `./build` and commit both the changed `.tid` files and the regenerated `index.html`.
 
 Both scripts invoke TiddlyWiki through **bun** (`bun node_modules/tiddlywiki/tiddlywiki.js`) rather than the `tiddlywiki` bin stub, which would pick up system node instead.
+
+## The vendored toolchain (`setup`)
+
+`.bun/` holds a project-local bun, downloaded rather than committed. The binary is ~94 MB and platform-specific, so committing it would bloat every clone *and* still hand a macOS machine a Linux binary — fetching per-platform is what actually makes an arbitrary clone work. `setup` maps `uname` to a release triple (linux/darwin × x64/aarch64) and unpacks the GitHub release archive directly, deliberately **not** piping through bun's official install script, which edits your shell rc files. If the standard x64 build won't execute — pre-AVX2 CPUs get SIGILL — it retries with bun's `-baseline` variant.
+
+**`BUN_VERSION` in `setup` is pinned on purpose.** An unpinned `latest` means two clones taken weeks apart resolve different bun versions and write different `bun.lockb`, so every fresh clone starts with a dirty tree. Bumping bun is therefore a deliberate commit: edit the pin, run `./setup && .bun/bin/bun install`, and commit the resulting `bun.lockb`.
+
+The Python venv is best-effort: `uv sync` when uv is present, otherwise a `python3 -m venv` + pip fallback, and a warning if neither exists. The wiki builds fine without it — only `scripts/` needs it.
 
 ## tiddlywiki.info
 
@@ -58,5 +67,6 @@ Generated tiddlers land in `wiki/tiddlers/` and are picked up by the next `./bui
 
 - **`.nojekyll` must stay.** It disables Jekyll preprocessing on GitHub Pages; without it, paths beginning with `_` are silently dropped.
 - `$:/StoryList` records which tiddlers are open in the browser. TiddlyWiki rewrites it on every serve and build, so it is gitignored to keep that churn out of diffs.
-- `node_modules/`, `.codegraph/`, `.cursor/`, and `resume.sh` (a local relaunch wrapper) are all untracked by design.
+- `.bun/`, `node_modules/`, `.venv/`, `.codegraph/`, `.cursor/`, and `resume.sh` (a local relaunch wrapper) are all untracked by design — `./setup` reconstructs the first three.
+- `index.html` is not byte-reproducible across machines: TiddlyWiki serialises the tiddlers inside a plugin in filesystem read order, so a rebuild elsewhere shuffles a few hundred bytes without changing content. Don't chase that diff.
 - **CodeGraph MCP** is initialized here, but the tracked source is `.tid` files and shell scripts, which it doesn't usefully index — plain Read/Grep is the faster route in this repo.

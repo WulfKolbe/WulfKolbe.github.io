@@ -3,5 +3,6 @@
 # back into wiki/tiddlers/ as .tid files by the filesystem plugin.
 set -e
 cd "$(dirname "$0")"
-exec bun node_modules/tiddlywiki/tiddlywiki.js wiki \
+if [ ! -x .bun/bin/bun ] || [ ! -d node_modules/tiddlywiki ]; then ./setup; fi
+exec .bun/bin/bun node_modules/tiddlywiki/tiddlywiki.js wiki \
 	--listen host=127.0.0.1 port="${PORT:-8080}"

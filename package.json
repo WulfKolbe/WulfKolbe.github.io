@@ -2,6 +2,7 @@
   "name": "wulfkolbe-github-io",
   "private": true,
   "scripts": {
+    "setup": "./setup",
     "serve": "./serve",
     "build": "./build"
   },

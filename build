@@ -2,5 +2,6 @@
 # Render wiki/ into the single-file index.html that GitHub Pages publishes.
 set -e
 cd "$(dirname "$0")"
-bun node_modules/tiddlywiki/tiddlywiki.js wiki --output . --build index
+if [ ! -x .bun/bin/bun ] || [ ! -d node_modules/tiddlywiki ]; then ./setup; fi
+.bun/bin/bun node_modules/tiddlywiki/tiddlywiki.js wiki --output . --build index
 echo "built index.html ($(du -h index.html | cut -f1))"
