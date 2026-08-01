@@ -8,10 +8,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The important thing to understand is that there are two representations of the same wiki, and only one of them is the source:
 
-- **`wiki/`** is the source of truth — a TiddlyWiki *folder* edition. Every tiddler is a separate `.tid` file under `wiki/tiddlers/`, which is what makes the content diffable and reviewable in git.
+- **`wiki/`** is the source of truth — a TiddlyWiki *folder* edition. Every tiddler is a separate `.tid` file under `wiki/tiddlers/`, which is what makes the content diffable and reviewable in git. Attachments too big or too binary to embed live alongside them in `wiki/files/`.
 - **`index.html`** at the repo root is a 3.6 MB **generated artifact** — the whole wiki rendered into one self-contained file. It is committed (GitHub Pages has no build step and serves it verbatim), but it must never be hand-edited. Any manual change to it is destroyed by the next `./build`.
+- **`files/`** at the repo root is likewise **generated** — a mirror of `wiki/files/`, rewritten from scratch on every build. Put attachments in `wiki/files/`; anything dropped in the root copy is deleted without warning.
 
-So: edit `wiki/tiddlers/`, then rebuild. Never edit `index.html`.
+So: edit `wiki/tiddlers/` and `wiki/files/`, then rebuild. Never edit `index.html` or the root `files/`.
+
+## Attachments and why `files/` is mirrored
+
+The dev server and GitHub Pages disagree about where the wiki's root is, and that disagreement is the whole reason the mirror exists.
+
+TiddlyWiki's node server has a route (`core-server/server/routes/get-file.js`) that serves `wiki/files/` at the URL `/files/`. Pages has no such route — it serves the repo root as-is, where that same file sits at `/wiki/files/…`. So a tiddler linking `[ext[report|./files/report.pdf]]` works perfectly under `./serve` and **404s the moment it is published**.
+
+Copying `wiki/files/` to `./files/` at build time makes the one relative URL resolve in both places, so links don't need rewriting for publication. This is verified rather than assumed: without the mirror a static server returns 404 for `/files/…`, with it 200 in both environments.
+
+The duplication is free in git. Both paths hold byte-identical content, so they hash to the same blob and are stored once; only the working tree carries two copies.
 
 ## Commands
 
@@ -34,13 +45,13 @@ Both scripts invoke TiddlyWiki through **bun** (`bun node_modules/tiddlywiki/tid
 
 `./publish` is the one-shot path to production: it runs `./build`, `git add -A`, commits, and pushes. Flags: `-m "msg"` for your own message, `--no-push` to stop after committing, `--wait` to poll the Pages API until the build finishes.
 
-The generated commit message names the **tiddlers** that changed (`Update wiki: HelloThere, MarkdownExample and 3 more`), not the files. `index.html` moves on every single build, so listing files would say the same uninformative thing every time; the tiddler names are the actual content of the change.
+The generated commit message names the **tiddlers and attachments** that changed (`Update wiki: HelloThere, report.pdf and 3 more`), not the files touched. `index.html` and the `files/` mirror move on every build, so listing paths would say the same uninformative thing every time; the tiddler names are the actual content of the change. Only `wiki/files/` is counted — the root mirror is generated from it and would double every entry.
 
 Guards worth knowing, because each exists for a failure that has a confusing symptom:
 
 - **Refuses to run off `master`.** Pages serves that branch's root, so a commit anywhere else builds nothing and looks like a silent no-op.
 - **Refuses when `origin/master` has commits you don't**, telling you to `git pull --rebase`, rather than letting git reject the push with a wall of text. Your local commit is already made at that point and is not lost.
-- **Checks `index.html` against GitHub's file-size limits** — see below.
+- **Checks the largest published file against GitHub's size limits** — `index.html` is the usual offender, but an attachment under `files/` trips the same wire. See below.
 - **A failure to observe the Pages build never fails the script.** By the time `--wait` runs, the push has already succeeded; exiting non-zero there would report a publish that actually worked as broken.
 
 ## Image weight — the thing most likely to bite

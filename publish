@@ -36,17 +36,33 @@ fi
 # GitHub warns past 50MB per file and refuses the push outright at 100MB, and
 # every publish stores a whole fresh copy of index.html in history. Catch that
 # here rather than halfway through a push.
-# GitHub's thresholds are MiB: it warns past 50 MiB and hard-rejects at 100 MiB.
+# GitHub's thresholds are per file and in MiB: it warns past 50 MiB and
+# hard-rejects at 100 MiB. index.html is the usual offender, but an attachment
+# under files/ can trip the same wire, so weigh the largest of the lot.
 # stat's flags differ between GNU and BSD, hence the fallback.
-size=$(stat -c %s index.html 2>/dev/null || stat -f %z index.html)
+filesize() { stat -c %s "$1" 2>/dev/null || stat -f %z "$1"; }
+
+size=0
+biggest=index.html
+while IFS= read -r -d '' candidate; do
+	this=$(filesize "$candidate")
+	if [ "$this" -gt "$size" ]; then
+		size=$this
+		biggest=$candidate
+	fi
+done < <(
+	printf '%s\0' index.html
+	[ -d ./files ] && find ./files -type f -print0
+)
+
 mib=$((size / 1048576))
 if [ "$size" -gt 99614720 ] && [ "${PUBLISH_ALLOW_HUGE:-0}" != 1 ]; then
-	echo "publish: index.html is ${mib} MiB -- GitHub rejects files over 100 MiB." >&2
-	echo "publish: move images out of the wiki, or see the externalimages note in CLAUDE.md." >&2
+	echo "publish: $biggest is ${mib} MiB -- GitHub rejects files over 100 MiB." >&2
+	echo "publish: shrink it, keep it out of the repo, or see the size notes in CLAUDE.md." >&2
 	echo "publish: set PUBLISH_ALLOW_HUGE=1 to try anyway." >&2
 	exit 1
 elif [ "$size" -gt 52428800 ]; then
-	echo "publish: warning -- index.html is ${mib} MiB, past GitHub's 50 MiB warning line." >&2
+	echo "publish: warning -- $biggest is ${mib} MiB, past GitHub's 50 MiB warning line." >&2
 fi
 
 git add -A
@@ -55,9 +71,16 @@ git add -A
 # is actually about, and index.html moves on every single build regardless.
 summarize() {
 	local names count
-	# strip the directory, the .tid suffix, and undo the $__ filename encoding
-	names=$(git diff --cached --name-only --diff-filter=ACMRD -- 'wiki/tiddlers/*.tid' |
-		sed 's|.*/||; s|\.tid$||; s|^\$__|$:/|')
+	# Tiddlers: strip the directory, the .tid suffix, and undo the $__ encoding.
+	# Attachments: name them too, so a files-only change says what it changed
+	# instead of the uninformative fallback. Only wiki/files counts -- the root
+	# files/ mirror is generated from it and would double every entry.
+	names=$(
+		git diff --cached --name-only --diff-filter=ACMRD -- 'wiki/tiddlers/*.tid' |
+			sed 's|.*/||; s|\.tid$||; s|^\$__|$:/|'
+		git diff --cached --name-only --diff-filter=ACMRD -- 'wiki/files/' |
+			sed 's|.*/||'
+	)
 
 	# An empty list must short-circuit here: letting it reach the arithmetic
 	# below yields nonsense like "and -3 more".

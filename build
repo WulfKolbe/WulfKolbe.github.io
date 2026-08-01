@@ -1,7 +1,24 @@
 #!/usr/bin/env bash
-# Render wiki/ into the single-file index.html that GitHub Pages publishes.
+# Render wiki/ into the single-file index.html that GitHub Pages publishes,
+# and mirror wiki/files/ to the repo root so attachments resolve the same way
+# locally and on Pages.
 set -e
 cd "$(dirname "$0")"
 if [ ! -x .bun/bin/bun ] || [ ! -d node_modules/tiddlywiki ]; then ./setup; fi
 .bun/bin/bun node_modules/tiddlywiki/tiddlywiki.js wiki --output . --build index
 echo "built index.html ($(du -h index.html | cut -f1))"
+
+# The dev server exposes wiki/files/ at the URL /files/, but Pages serves the
+# repo root -- where that same path is ./files/. Copying keeps a link like
+# [ext[report|./files/x.pdf]] working in both, instead of 404ing once published.
+# Git stores the two identical copies as a single blob, so this costs nothing
+# in history; only the working tree holds it twice.
+if [ -d wiki/files ]; then
+	rm -rf ./files
+	cp -R wiki/files ./files
+	echo "mirrored wiki/files -> files ($(du -sh ./files | cut -f1), $(find ./files -type f | wc -l) file(s))"
+elif [ -d ./files ]; then
+	# wiki/files went away; drop the stale mirror rather than publishing orphans.
+	rm -rf ./files
+	echo "removed stale files/ (wiki/files no longer exists)"
+fi
