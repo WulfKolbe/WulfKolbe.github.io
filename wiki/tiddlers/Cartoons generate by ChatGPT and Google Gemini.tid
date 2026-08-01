@@ -1,0 +1,10 @@
+created: 20260801133221320
+modified: 20260801133900877
+tags: 
+title: Cartoons generate by ChatGPT and Google Gemini
+type: text/vnd.tiddlywiki
+
+<$list filter="[prefix[ChatGPT Image]]" >
+<$link> <$image source= <<currentTiddler>> width=100 /></$link> <br>
+
+</$list>
