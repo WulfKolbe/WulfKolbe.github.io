@@ -6,8 +6,8 @@ Unfortunately the Claude CLI and Claude.ai deviated from my plans and took of in
 My task was only to shout and scream at the constantly cheating Claude CLI's and do provide some test data.
 
 ## Some very old gimmicks - BlobTracker (from the last millennium)
- I have a background in industrial high-speed image processing and therefore some allergic reaction if the CLI gnerate code that loads again and again some heavy hitter like an opencv instance for some totally trivial tasks.
-Therefore I have injected some very old C-code.
+ I have a background in industrial high-speed image processing and therefore some allergic reaction if the CLI gnerated code that loads again and again some heavy hitters like OPNECV for some totally trivial tasks.
+Therefore I have given the CLI some very old C-code as an example how to tack blobs (org. code belongs to ISAVISION GmbH Kiel project SQS published in ([ext[JOT1997-03|./files/jot-bericht.pdf]]).
 
 ## Original idea to run inside Tiddlywiki 
 This project has started as a Typescript project that could be transpiled to run in simple HTML page like HTML Tiddler of Tiddlywiki. My older Typescript code was able to access MathPix using the lines.json format and access GTPT4 image preview for pix to Latex task and Perplexity for BibTeX retrieval and Deepl.com for translation inside Tiddlywiki.  

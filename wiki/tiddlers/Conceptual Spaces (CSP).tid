@@ -1,5 +1,5 @@
 created: 20260731124046258
-modified: 20260731125258841
+modified: 20260731132548888
 tags: 
 title: Conceptual Spaces (CSP)
 type: text/vnd.tiddlywiki
@@ -7,4 +7,7 @@ type: text/vnd.tiddlywiki
 I tried to understand mathematical and scientific documents. 
 The project pdfdrill and all its cousins are spin-offs from my research related to "Conceptual Spaces (CSP)".
 On a daily basis ([[code4AI|https://www.youtube.com/@code4AI]]) I see publications related to improvement of memory and geometric structure of the latent space. A CSP (see [[Gärdenfors|https://mitpress.mit.edu/9780262572194/conceptual-spaces/]]) is positioned on the opposite site, instead of having very large number of dimensions it has only those dimensions needed to describe an object in the most concise form. 
+[[Williams Gärdenfors|https://cs.nyu.edu/~davise/commonsense01/final/Gardenfors.pdf]]
 
+
+https://www.xplainableai.org/research/
