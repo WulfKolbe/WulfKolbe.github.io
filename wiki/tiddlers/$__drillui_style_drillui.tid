@@ -6,18 +6,17 @@ type: text/vnd.tiddlywiki
   display:block; width:100%; height:78vh; border:0; background:#1d2021;
 }
 [data-tiddler-title="drillui"] .drillui-bar {
-  display:flex; gap:6px; align-items:center; margin-bottom:6px;
+  display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px;
 }
-[data-tiddler-title="drillui"] .drillui-url {
-  flex:1 1 auto; min-width:80px; font-family:ui-monospace,monospace;
-  font-size:12.5px; padding:4px 8px;
+[data-tiddler-title="drillui"] .drillui-which {
+  flex:1 1 auto; font-family:ui-monospace,monospace; font-size:11.5px; opacity:.7;
 }
-[data-tiddler-title="drillui"] .drillui-tab {
-  white-space:nowrap; text-decoration:none;
+[data-tiddler-title="drillui"] .drillui-tab { white-space:nowrap; text-decoration:none; }
+[data-tiddler-title="drillui"] .drillui-warn {
+  padding:8px 12px; margin-bottom:6px; border-left:3px solid #fb4934;
+  background:rgba(251,73,52,.08); line-height:1.5;
 }
 [data-tiddler-title="drillui"] .drillui-foot {
   margin-top:6px; font-size:11.5px; opacity:.65; line-height:1.5;
-}
-[data-tiddler-title="drillui"] .drillui-blank {
-  padding:14px 16px; opacity:.8; line-height:1.6;
+  word-break:break-all;
 }

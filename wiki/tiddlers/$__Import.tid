@@ -6,5 +6,6 @@ The following tiddlers were imported:
 
 # [[drillui]]
 # [[$:/drillui/bridge]]
-# [[$:/drillui/bridge/draft]]
+# [[$:/drillui/route/localhost]]
+# [[$:/drillui/route/cocalc]]
 # [[$:/drillui/style/drillui]]

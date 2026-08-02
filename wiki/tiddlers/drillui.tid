@@ -2,33 +2,52 @@ tags:
 title: drillui
 type: text/vnd.tiddlywiki
 
+\function drillui.hostname() [{$:/info/url/hostname}]
+\function drillui.origin() [{$:/info/url/origin}]
+\function drillui.pathname() [{$:/info/url/pathname}]
+\function drillui.protocol() [{$:/info/url/protocol}]
+
+\function drillui.route.localhost() [{$:/drillui/route/localhost}]
+\function drillui.route.cocalc() [{$:/drillui/route/cocalc}]
+
+\function drillui.route.codespace() [<drillui.hostname>search-replace:g:regexp[-\d+\.app\.github\.dev$],[-8787.app.github.dev]addprefix[https://]addsuffix[/]]
+
+\function drillui.route.cocalc.here() [<drillui.pathname>splitregexp[/]butfirst[]first[]addprefix[/]addprefix<drillui.origin>addsuffix[/server/8787]]
+
+\function drillui.auto() [<drillui.hostname>regexp[\.app\.github\.dev$]then<drillui.route.codespace>] ~[<drillui.hostname>regexp[cocalc]then<drillui.route.cocalc.here>] ~[<drillui.hostname>regexp[^(localhost|127\.0\.0\.1)$]then<drillui.route.localhost>] ~[<drillui.route.cocalc>]
+
+\function drillui.which() [<drillui.hostname>regexp[\.app\.github\.dev$]then[codespace (derived from this wiki's host)]] ~[<drillui.hostname>regexp[cocalc]then[cocalc (derived from this wiki's path)]] ~[<drillui.hostname>regexp[^(localhost|127\.0\.0\.1)$]then[localhost]] ~[cocalc (bookmarked — this wiki is elsewhere)]
+
+\function drillui.url() [{$:/drillui/bridge}!match[]] ~[<drillui.auto>]
+\function drillui.pinned() [{$:/drillui/bridge}!match[]]
+\function drillui.mixed() [<drillui.protocol>match[https:]] :filter[<drillui.url>prefix[http://]]
+
 <div class="drillui-bar">
 
-<$edit-text tiddler="$:/drillui/bridge/draft" tag="input" default="" placeholder="https://…/server/8787/  — the bridge base URL" class="drillui-url"/><$button tooltip="point the frame at this URL — this restarts the REPL session"><$action-setfield $tiddler="$:/drillui/bridge" text={{$:/drillui/bridge/draft}}/>load</$button><$button tooltip="reload the frame: the bridge kills the REPL process and spawns a new one"><$action-setfield $tiddler="$:/drillui/bridge" text=""/><$action-setfield $tiddler="$:/drillui/bridge" text={{$:/drillui/bridge/draft}}/>reload ⟳</$button><a href={{$:/drillui/bridge}} target="_blank" rel="noopener" class="drillui-tab">tab ↗</a>
+<$button tooltip="follow this wiki's own location"><$action-setfield $tiddler="$:/drillui/bridge" text=""/>auto</$button><$button tooltip={{{ [<drillui.route.localhost>] }}}><$action-setfield $tiddler="$:/drillui/bridge" text={{$:/drillui/route/localhost}}/>localhost</$button><$button tooltip={{{ [<drillui.route.cocalc>] }}}><$action-setfield $tiddler="$:/drillui/bridge" text={{$:/drillui/route/cocalc}}/>cocalc</$button><$button tooltip={{{ [<drillui.route.codespace>] }}}><$action-setfield $tiddler="$:/drillui/bridge" text={{{ [<drillui.route.codespace>] }}}/>codespace</$button><span class="drillui-which"><$text text={{{ [<drillui.pinned>then[pinned]] ~[<drillui.which>addprefix[auto: ]] }}}/></span><a href={{{ [<drillui.url>] }}} target="_blank" rel="noopener" class="drillui-tab">tab ↗</a>
 
 </div>
 
-<$reveal type="nomatch" state="$:/drillui/bridge" text="">
-<iframe class="drillui-frame" src={{$:/drillui/bridge}} frameborder="0" marginwidth="0" marginheight="0" allow="clipboard-read; clipboard-write"></iframe>
-</$reveal>
+<$list filter="[<drillui.mixed>!match[]]" variable="ignore">
 
-<$reveal type="match" state="$:/drillui/bridge" text="">
+<div class="drillui-warn">
 
-<div class="drillui-blank">
-
-No bridge URL set. Enter the URL where `bun run tools/drillui_bridge.ts` serves its terminal page — the same URL you would open in a browser tab — and press ''load''.
-
-* local: `http://localhost:8787/`
-* CoCalc: `https://cocalc.ai/<project-id>/server/8787/`
-
-If the panel stays blank //after// loading, the frame was refused: press ''tab ↗'', which shows the error a frame swallows. An https wiki cannot embed an `http://` bridge at all — use the proxied `https://` URL.
+This wiki is served over https, so the browser will refuse to embed <$text text={{{ [<drillui.url>] }}}/> — an `http://` frame in an https page is mixed content. Use the ''cocalc'' or ''codespace'' route, both of which are https.
 
 </div>
 
+</$list>
+
+<$reveal type="nomatch" state="$:/drillui/bridge" text="" default="">
+<iframe class="drillui-frame" src={{{ [<drillui.url>] }}} frameborder="0" marginwidth="0" marginheight="0" allow="clipboard-read; clipboard-write"></iframe>
 </$reveal>
+
+<$list filter="[<drillui.pinned>match[]]" variable="ignore">
+<iframe class="drillui-frame" src={{{ [<drillui.auto>] }}} frameborder="0" marginwidth="0" marginheight="0" allow="clipboard-read; clipboard-write"></iframe>
+</$list>
 
 <div class="drillui-foot">
 
-One frame == one REPL process: `drillui_bridge.ts` spawns it on WebSocket open and kills it on close. Closing this tiddler, or pressing ''load'' / ''reload'', ends the running session.
+<$text text={{{ [<drillui.url>] }}}/> — one frame == one REPL process: `drillui_bridge.ts` spawns it on WebSocket open and kills it on close, so switching route ends the running session. If the panel stays blank, press ''tab ↗'': a real tab shows the error a frame swallows.
 
 </div>
