@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LATW - LaTeX to TiddlyWiki Converter</title>
+    <!-- EXPLO START: styles.css -->
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; padding: 20px; background: #f5f5f5; }
+.container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+h1 { color: #333; margin-bottom: 20px; }
+.controls { display: flex; gap: 15px; margin: 20px 0; flex-wrap: wrap; }
+button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+button:hover { background: #0056b3; }
+textarea { width: 100%; min-height: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; }
+#output { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; max-height: 500px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+.status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+
+
+</style>
+<!-- EXPLO END: styles.css -->
+</head>
+<body>
+    <div class="container">
+        <h1>📄 LATW Converter</h1>
+        <div class="status" id="status">Loading LATW...</div>
+        
+        <div class="controls">
+            <textarea id="latexInput" placeholder="Paste LaTeX code here...">
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+
+\section{Introduction}
+This is a test with a formula: $E = mc^2$.
+
+\[
+\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
+\]
+
+\subsection{Tables}
+\begin{table}
+\caption{Sample Table}
+\begin{tabular}{|c|c|}
+\hline
+A & B \\
+\hline
+1 & 2 \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{document}
+            </textarea>
+            <br>
+            <button onclick="uiProcessLaTeX()">Convert to TiddlyWiki</button>
+            <button onclick="downloadJSON()" id="downloadBtn" style="display:none;">Download Tiddlers</button>
+        </div>
+        
+        <div id="output">Results will appear here...</div>
+    </div>
+
+    <!-- EXPLO START: module-loader.js -->
+<script>
+// Module loader - defines base LATW class and initial module exports
+(function(window) {
+  'use strict';
+  
+  class LATW {
+  bibkey;
+  data;
+  tags;
+  flags;
+  constructor(bibkey, tags = "", flags = {}) {
+    this.bibkey = bibkey;
+    this.data = new Map;
+    this.tags = Array.isArray(tags) ? tags.join(" ") : tags;
+    this.flags = flags;
+  }
+  add(id, content, extraFields = {}) {
+    const key = this.generateTiddlerKey(id);
+    this.data.set(key, { ...extraFields, content });
+  }
+  generateTiddlerKey(id) {
+    return id;
+  }
+  processFullText(text) {
+    return text;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+  addTiddler(tiddlers, key, text, extraFields = {}) {
+    const tagsString = this.tags.split(" ").map((tag) => tag.includes(" ") ? `[${tag}]` : tag).join(" ");
+    tiddlers.set(key, {
+      title: key,
+      text,
+      tags: `${tagsString} bibkey:${this.bibkey}`,
+      type: "text/vnd.tiddlywiki",
+      ...extraFields
+    });
+  }
+  appendTiddlers(tiddlers) {
+    for (const [key, value] of this.data) {
+      const { content, ...extraFields } = value;
+      this.addTiddler(tiddlers, key, content, extraFields);
+    }
+  }
+  init(tiddlers) {
+    tiddlers.forEach((tiddler) => {
+      this.data.set(tiddler.title, tiddler);
+    });
+  }
+}
+
+  if (typeof window !== 'undefined') {
+    window.LATW = LATW;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+
+
+</script>
+<!-- EXPLO END: module-loader.js -->
+
+    <!-- EXPLO START: modules.js -->
+<script>
+(function(window) {
+  'use strict';
+  
+  class LATW {
+  bibkey;
+  data;
+  tags;
+  flags;
+  constructor(bibkey, tags = "", flags = {}) {
+    this.bibkey = bibkey;
+    this.data = new Map;
+    this.tags = Array.isArray(tags) ? tags.join(" ") : tags;
+    this.flags = flags;
+  }
+  add(id, content, extraFields = {}) {
+    const key = this.generateTiddlerKey(id);
+    this.data.set(key, { ...extraFields, content });
+  }
+  generateTiddlerKey(id) {
+    return id;
+  }
+  processFullText(text) {
+    return text;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+  addTiddler(tiddlers, key, text, extraFields = {}) {
+    const tagsString = this.tags.split(" ").map((tag) => tag.includes(" ") ? `[${tag}]` : tag).join(" ");
+    tiddlers.set(key, {
+      title: key,
+      text,
+      tags: `${tagsString} bibkey:${this.bibkey}`,
+      type: "text/vnd.tiddlywiki",
+      ...extraFields
+    });
+  }
+  appendTiddlers(tiddlers) {
+    for (const [key, value] of this.data) {
+      const { content, ...extraFields } = value;
+      this.addTiddler(tiddlers, key, content, extraFields);
+    }
+  }
+  init(tiddlers) {
+    tiddlers.forEach((tiddler) => {
+      this.data.set(tiddler.title, tiddler);
+    });
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.LATW = LATW;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class SectionScanner extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    super(bibkey, tags, flags);
+  }
+  processFullText(text) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] SectionScanner: Processing ${text.length} characters`);
+    }
+    let processedText = text;
+    let sectionCount = 0;
+    const sectionTypes = [
+      { regex: /\\part\s*{([^}]+)}/g, level: 0, type: "part" },
+      { regex: /\\chapter\s*{([^}]+)}/g, level: 1, type: "chapter" },
+      { regex: /\\section\s*{([^}]+)}/g, level: 2, type: "section" },
+      { regex: /\\subsection\s*{([^}]+)}/g, level: 3, type: "subsection" },
+      { regex: /\\subsubsection\s*{([^}]+)}/g, level: 4, type: "subsubsection" },
+      { regex: /\\paragraph\s*{([^}]+)}/g, level: 5, type: "paragraph" },
+      { regex: /\\subparagraph\s*{([^}]+)}/g, level: 6, type: "subparagraph" }
+    ];
+    sectionTypes.forEach((sectionType) => {
+      processedText = processedText.replace(sectionType.regex, (match, title) => {
+        sectionCount++;
+        const tiddlerKey = `${this.bibkey}_${sectionType.type}_${sectionCount}`;
+        this.add(tiddlerKey, title, {
+          type: "text/vnd.tiddlywiki",
+          kind: "section",
+          sectionType: sectionType.type,
+          level: sectionType.level.toString(),
+          refnum: sectionCount.toString(),
+          anchor: tiddlerKey,
+          title
+        });
+        return match;
+      });
+    });
+    if (this.flags.debug) {
+      console.error(`[DEBUG] SectionScanner: Found ${sectionCount} sections`);
+    }
+    return processedText;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.SectionScanner = SectionScanner;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class FormulaScanner extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    super(bibkey, tags, flags);
+  }
+  processFullText(text) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] FormulaScanner: Processing formulas`);
+    }
+    let processedText = text;
+    let formulaCount = 0;
+    const formulaPatterns = [
+      { pattern: /\$\$([\s\S]+?)\$\$/g, type: "display", env: null },
+      { pattern: /\\\[([\s\S]+?)\\\]/g, type: "display", env: null },
+      { pattern: /\\begin{equation}([\s\S]*?)\\end{equation}/g, type: "equation", env: "equation" },
+      { pattern: /\\begin{align}([\s\S]*?)\\end{align}/g, type: "align", env: "align" },
+      { pattern: /\$(?!\$)([^$\n]+?)\$/g, type: "inline", env: null }
+    ];
+    formulaPatterns.forEach(({ pattern, type, env }) => {
+      processedText = processedText.replace(pattern, (match, content) => {
+        formulaCount++;
+        const formulaId = formulaCount.toString().padStart(4, "0");
+        const tiddlerKey = `${this.bibkey}_formula_${formulaId}`;
+        this.add(tiddlerKey, content, {
+          type: "text/vnd.tiddlywiki",
+          kind: "formula",
+          formulaType: type,
+          environment: env || "none",
+          displayMode: type === "display" || type === "equation" || type === "align",
+          original: match,
+          order: formulaCount.toString()
+        });
+        return `{{${tiddlerKey}||FORMULA}}`;
+      });
+    });
+    if (this.flags.debug) {
+      console.error(`[DEBUG] FormulaScanner: Found ${formulaCount} formulas`);
+    }
+    return processedText;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.FormulaScanner = FormulaScanner;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class BibliographyModule extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    const combinedTags = ["bibentry", ...tags ? tags.split(" ") : []].join(" ");
+    super(bibkey, combinedTags, flags);
+  }
+  processFullText(content) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] BibliographyModule: Processing ${content.length} characters`);
+    }
+    let processedContent = content;
+    processedContent = processedContent.replace(/\\bibliography{([^}]+)}/g, (match, bibFiles) => {
+      if (this.flags.debug) {
+        console.error(`[DEBUG] BibliographyModule: Found bibliography: ${bibFiles}`);
+      }
+      const bibFileList = bibFiles.split(",").map((f) => f.trim());
+      bibFileList.forEach((bibFile) => {
+        const bibPath = this.flags.projectPath ? `${this.flags.projectPath}/${bibFile}` : bibFile;
+        this.processBibFile(bibPath);
+      });
+      return `%%%!!! Bibliography: ${bibFiles}`;
+    });
+    return processedContent;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+  processBibFile(bibPath) {
+    const bibKey = bibPath.replace(/\.bib$/, "").split("/").pop() || "bib";
+    const tiddlerKey = `${this.bibkey}_bib_${bibKey}`;
+    this.add(tiddlerKey, `Bibliography file: ${bibPath}`, {
+      type: "text/vnd.tiddlywiki",
+      kind: "bibfile",
+      bibkey: bibKey,
+      path: bibPath
+    });
+    if (this.flags.debug) {
+      console.error(`[DEBUG] BibliographyModule: Created placeholder for ${bibPath}`);
+    }
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.BibliographyModule = BibliographyModule;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class TableScanner extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    const combinedTags = ["table", ...tags ? tags.split(" ") : []].join(" ");
+    super(bibkey, combinedTags, flags);
+  }
+  processFullText(text) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] TableScanner: Processing ${text.length} characters`);
+    }
+    let processedText = text;
+    let tableCount = 0;
+    processedText = processedText.replace(/\\begin{table}([\s\S]*?)\\end{table}/gi, (fullMatch, content) => {
+      tableCount++;
+      const tiddlerKey = `${this.bibkey}_Table_${String(tableCount).padStart(3, "0")}`;
+      const captionMatch = content.match(/\\caption\s*{([^}]+)}/);
+      const caption = captionMatch ? captionMatch[1] : "";
+      const labelMatch = content.match(/\\label\s*{([^}]+)}/);
+      const label = labelMatch ? labelMatch[1] : "";
+      this.add(tiddlerKey, `{{${tiddlerKey}.svg||SVG}}`, {
+        type: "text/vnd.tiddlywiki",
+        kind: "table",
+        latex: fullMatch,
+        order: tableCount.toString(),
+        caption,
+        label
+      });
+      return `{{${tiddlerKey}||TABLE}}`;
+    });
+    processedText = processedText.replace(/\\begin{tabular}([\s\S]*?)\\end{tabular}/gi, (fullMatch, content) => {
+      if (processedText.substring(0, processedText.indexOf(fullMatch)).includes("\\begin{table}")) {
+        return fullMatch;
+      }
+      tableCount++;
+      const tiddlerKey = `${this.bibkey}_table_${String(tableCount).padStart(3, "0")}`;
+      this.add(tiddlerKey, `{{${tiddlerKey}.svg||SVG}}`, {
+        type: "text/vnd.tiddlywiki",
+        kind: "table",
+        latex: fullMatch,
+        order: tableCount.toString()
+      });
+      return `{{${tiddlerKey}||TABLE}}`;
+    });
+    if (this.flags.debug) {
+      console.error(`[DEBUG] TableScanner: Found ${tableCount} tables`);
+    }
+    return processedText;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.TableScanner = TableScanner;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class ReferenceScanner extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    super(bibkey, tags, flags);
+  }
+  processFullText(text) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] ReferenceScanner: Processing ${text.length} characters`);
+    }
+    let processedText = text;
+    let refCount = 0;
+    let labelCount = 0;
+    processedText = processedText.replace(/\\label\s*{([^}]+)}/g, (match, labelName) => {
+      labelCount++;
+      const tiddlerKey = `${this.bibkey}_label_${labelName}`;
+      this.add(tiddlerKey, labelName, {
+        type: "text/vnd.tiddlywiki",
+        kind: "label",
+        labelName,
+        anchor: tiddlerKey
+      });
+      return match;
+    });
+    processedText = processedText.replace(/\\ref\s*{([^}]+)}/g, (match, refName) => {
+      refCount++;
+      const tiddlerKey = `${this.bibkey}_ref_${refName}`;
+      this.add(tiddlerKey, refName, {
+        type: "text/vnd.tiddlywiki",
+        kind: "reference",
+        refName,
+        anchor: tiddlerKey
+      });
+      return `{{${tiddlerKey}||REF}}`;
+    });
+    processedText = processedText.replace(/\\cite(?:\[[^\]]*\])?\s*{([^}]+)}/g, (match, citeKeys) => {
+      refCount++;
+      const keys = citeKeys.split(",").map((k) => k.trim());
+      const firstKey = keys[0];
+      const tiddlerKey = `${this.bibkey}_cite_${firstKey}`;
+      this.add(tiddlerKey, citeKeys, {
+        type: "text/vnd.tiddlywiki",
+        kind: "citation",
+        citeKeys,
+        anchor: tiddlerKey
+      });
+      return `{{${tiddlerKey}||CITE}}`;
+    });
+    if (this.flags.debug) {
+      console.error(`[DEBUG] ReferenceScanner: Found ${labelCount} labels and ${refCount} references`);
+    }
+    return processedText;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.ReferenceScanner = ReferenceScanner;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class MacroScanner extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    super(bibkey, tags, flags);
+  }
+  processFullText(text) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] MacroScanner: Processing ${text.length} characters`);
+    }
+    let processedText = text;
+    let macroCount = 0;
+    const macroPatterns = [
+      /\\newcommand\s*{\\([^}]+)}(?:\[(\d+)\])?\s*{([^}]+)}/g,
+      /\\renewcommand\s*{\\([^}]+)}(?:\[(\d+)\])?\s*{([^}]+)}/g,
+      /\\def\s*\\([^#\s]+)(?:#(\d+))?[^{]*{([^}]+)}/g,
+      /\\let\s*\\([^\s=]+)\s*=\s*\\([^\s]+)/g
+    ];
+    macroPatterns.forEach((pattern) => {
+      processedText = processedText.replace(pattern, (match, name, argCount, definition, otherName) => {
+        macroCount++;
+        const tiddlerKey = `${this.bibkey}_macro_${name}`;
+        this.add(tiddlerKey, match, {
+          type: "text/vnd.tiddlywiki",
+          kind: "macro",
+          macroName: name,
+          argCount: argCount || "0",
+          definition: definition || `\\${otherName}`,
+          original: match
+        });
+        return match;
+      });
+    });
+    if (macroCount > 0) {
+      processedText = `%%%MACRO_COUNT=${macroCount}
+${processedText}`;
+    }
+    if (this.flags.debug) {
+      console.error(`[DEBUG] MacroScanner: Found ${macroCount} macros`);
+    }
+    return processedText;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.MacroScanner = MacroScanner;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class GraphicsScanner extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    const combinedTags = ["picture", ...tags ? tags.split(" ") : []].join(" ");
+    super(bibkey, combinedTags, flags);
+  }
+  processFullText(text) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] GraphicsScanner: Processing ${text.length} characters`);
+    }
+    let processedText = text;
+    let graphicCount = 0;
+    processedText = processedText.replace(/\\begin{figure}([\s\S]*?)\\end{figure}/gi, (figureMatch, figureContent) => {
+      const processedFigureContent = figureContent.replace(/\\includegraphics(?:\[[^\]]*\])?\s*{([^}]+)}/gi, (match, rawPath) => {
+        graphicCount++;
+        const tiddlerKey = `${this.bibkey}_graphic_${String(graphicCount).padStart(3, "0")}`;
+        const captionMatch = figureContent.match(/\\caption\s*{([^}]+)}/);
+        const caption = captionMatch ? captionMatch[1] : "";
+        const labelMatch = figureContent.match(/\\label\s*{([^}]+)}/);
+        const label = labelMatch ? labelMatch[1] : "";
+        this.add(tiddlerKey, `{{${tiddlerKey}||PIC}}`, {
+          type: "text/vnd.tiddlywiki",
+          kind: "graphic",
+          caption,
+          label,
+          order: graphicCount.toString()
+        });
+        return `{{${tiddlerKey}||PIC}}`;
+      });
+      return `\\begin{figure}${processedFigureContent}\\end{figure}`;
+    });
+    const lines = processedText.split('\n');
+    let lineNumber = 0;
+    for (let i = 0;i < lines.length; i++) {
+      lineNumber++;
+      const line = lines[i];
+      const graphicsMatch = line.match(/\\includegraphics(?:\[[^\]]*\])?\s*{([^}]+)}/i);
+      if (graphicsMatch) {
+        const rawPath = graphicsMatch[1].trim();
+        graphicCount++;
+        const tiddlerKey = `${this.bibkey}_graphic_${String(graphicCount).padStart(3, "0")}`;
+        this.add(tiddlerKey, `{{${tiddlerKey}||PIC}}`, {
+          type: "text/vnd.tiddlywiki",
+          kind: "graphic",
+          order: graphicCount.toString()
+        });
+        lines[i] = line.replace(graphicsMatch[0], `{{${tiddlerKey}||PIC}}`);
+      }
+    }
+    processedText = lines.join(`
+`);
+    if (this.flags.debug) {
+      console.error(`[DEBUG] GraphicsScanner: Found ${graphicCount} graphics`);
+    }
+    return processedText;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.GraphicsScanner = GraphicsScanner;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class TikzScanner extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    super(bibkey, tags, flags);
+  }
+  processFullText(text) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] TikzScanner: Processing ${text.length} characters`);
+    }
+    let processedText = text;
+    let tikzCount = 0;
+    processedText = processedText.replace(/\\begin{tikzpicture}([\s\S]*?)\\end{tikzpicture}/gi, (fullMatch, content) => {
+      tikzCount++;
+      const tiddlerKey = `${this.bibkey}_Tikz_${String(tikzCount).padStart(3, "0")}`;
+      const cleanContent = content.replace(/{{[A-Za-z0-9_]+_\d+\|\|[A-Z]+}}/g, (match) => {
+        if (match.includes("||PIC")) {
+          return "%INCLUDEGRAPHICS%";
+        }
+        return "%TRANSCLUSION%";
+      });
+      this.add(tiddlerKey, `{{${tiddlerKey}.svg||SVG}}`, {
+        type: "text/vnd.tiddlywiki",
+        kind: "tikz",
+        latex: `\\begin{tikzpicture}${cleanContent}\\end{tikzpicture}`,
+        order: tikzCount.toString()
+      });
+      return `{{${tiddlerKey}||TIKZ}}`;
+    });
+    processedText = processedText.replace(/\\tikz\s*{([^}]+)}/gi, (match, content) => {
+      tikzCount++;
+      const tiddlerKey = `${this.bibkey}_Tikz_${String(tikzCount).padStart(3, "0")}`;
+      this.add(tiddlerKey, `{{${tiddlerKey}.svg||SVG}}`, {
+        type: "text/vnd.tiddlywiki",
+        kind: "tikz",
+        latex: match,
+        order: tikzCount.toString()
+      });
+      return `{{${tiddlerKey}||TIKZ}}`;
+    });
+    if (this.flags.debug) {
+      console.error(`[DEBUG] TikzScanner: Found ${tikzCount} TikZ elements`);
+    }
+    return processedText;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.TikzScanner = TikzScanner;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  class LATW {
+  bibkey;
+  data;
+  tags;
+  flags;
+  constructor(bibkey, tags = "", flags = {}) {
+    this.bibkey = bibkey;
+    this.data = new Map;
+    this.tags = Array.isArray(tags) ? tags.join(" ") : tags;
+    this.flags = flags;
+  }
+  add(id, content, extraFields = {}) {
+    const key = this.generateTiddlerKey(id);
+    this.data.set(key, { ...extraFields, content });
+  }
+  generateTiddlerKey(id) {
+    return id;
+  }
+  processFullText(text) {
+    return text;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+  addTiddler(tiddlers, key, text, extraFields = {}) {
+    const tagsString = this.tags.split(" ").map((tag) => tag.includes(" ") ? `[${tag}]` : tag).join(" ");
+    tiddlers.set(key, {
+      title: key,
+      text,
+      tags: `${tagsString} bibkey:${this.bibkey}`,
+      type: "text/vnd.tiddlywiki",
+      ...extraFields
+    });
+  }
+  appendTiddlers(tiddlers) {
+    for (const [key, value] of this.data) {
+      const { content, ...extraFields } = value;
+      this.addTiddler(tiddlers, key, content, extraFields);
+    }
+  }
+  init(tiddlers) {
+    tiddlers.forEach((tiddler) => {
+      this.data.set(tiddler.title, tiddler);
+    });
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.LATW = LATW;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class DocumentHeaderModule extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    super(bibkey, tags, flags);
+  }
+  processFullText(content) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] DocumentHeaderModule: Processing document header`);
+    }
+    const documentclass = content.match(/\\documentclass(?:\[[^\]]*\])\s*{([^}]+)}/);
+    const title = content.match(/\\title\s*{([^}]+)}/);
+    const author = content.match(/\\author\s*{([^}]+)}/);
+    const date = content.match(/\\date\s*{([^}]+)}/);
+    const docKey = `${this.bibkey}_document`;
+    const docTitle = title ? title[1] : "Untitled Document";
+    const metadata = {
+      type: "text/vnd.tiddlywiki",
+      kind: "document",
+      title: docTitle,
+      author: author ? author[1] : "Unknown",
+      date: date ? date[1] : new Date().getFullYear().toString(),
+      documentclass: documentclass ? documentclass[1] : "",
+      bibkey: this.bibkey
+    };
+    this.add(docKey, `Document: ${docTitle}`, metadata);
+    const projectPath = this.flags.projectPath || "";
+    const contentWithPath = `%%%PROJECT_PATH=${projectPath}
+${content}`;
+    if (this.flags.debug) {
+      console.error(`[DEBUG] DocumentHeaderModule: Created document metadata`);
+    }
+    return contentWithPath;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.DocumentHeaderModule = DocumentHeaderModule;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function(window) {
+  'use strict';
+  
+  const LATW = window.LATW || {};
+
+class ParagraphScanner extends LATW {
+  constructor(bibkey, tags = "", flags = {}) {
+    super(bibkey, tags, flags);
+  }
+  processFullText(text) {
+    if (this.flags.debug) {
+      console.error(`[DEBUG] ParagraphScanner: Processing ${text.length} characters`);
+    }
+    let processedText = text;
+    let paragraphCount = 0;
+    const paragraphs = processedText.split(/\n\s*\n/);
+    paragraphs.forEach((paragraph, index) => {
+      if (paragraph.trim() && !paragraph.trim().startsWith("\\")) {
+        paragraphCount++;
+        const tiddlerKey = `${this.bibkey}_paragraph_${String(paragraphCount).padStart(3, "0")}`;
+        this.add(tiddlerKey, paragraph.trim(), {
+          type: "text/vnd.tiddlywiki",
+          kind: "paragraph",
+          refnum: paragraphCount.toString(),
+          anchor: tiddlerKey
+        });
+      }
+    });
+    if (this.flags.debug) {
+      console.error(`[DEBUG] ParagraphScanner: Found ${paragraphCount} paragraphs`);
+    }
+    return processedText;
+  }
+  processParagraph(paragraph) {
+    return paragraph;
+  }
+}
+
+  
+  if (typeof window !== 'undefined') {
+    window.ParagraphScanner = ParagraphScanner;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<!-- EXPLO END: modules.js -->
+
+    <!-- EXPLO START: main-script.js -->
+<script>
+// Main LATW processing function
+(function(window) {
+  'use strict';
+  
+  async function processLaTeX(content, options = {}) {
+    const {
+      bibkey = "LaTeXProject",
+      config = [],
+      debug = false,
+      projectPath = ""
+    } = options;
+    
+    const flags = { debug, projectPath };
+    const modules = [];
+    
+    // Load modules from window
+    config.forEach((moduleConfig) => {
+      try {
+        const ModuleClass = window[moduleConfig.classname];
+        if (ModuleClass && typeof ModuleClass === "function") {
+          const instance = new ModuleClass(bibkey, moduleConfig.tags || "", flags);
+          modules.push(instance);
+          if (debug) {
+            console.error(`[DEBUG] Loaded module: ${moduleConfig.classname}`);
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading module ${moduleConfig.classname}:`, error);
+      }
+    });
+    
+    const tiddlers = new Map();
+    let processedText = content;
+    
+    // Initialize modules
+    modules.forEach(module => {
+      if (module.init) {
+        module.init(Array.from(tiddlers.values()));
+      }
+    });
+    
+    // Process through each module
+    for (const processor of modules) {
+      if (debug) {
+        console.error(`[DEBUG] Processing with: ${processor.constructor.name}`);
+      }
+      
+      try {
+        if (processor.processFullText) {
+          const result = processor.processFullText(processedText);
+          if (typeof result === "string") {
+            processedText = result;
+          }
+        }
+      } catch (error) {
+        console.error(`Error in ${processor.constructor.name}:`, error);
+      }
+    }
+    
+    // Paragraph processing
+    const paragraphs = processedText.split('\\n\\n');
+    if (debug) {
+      console.error(`[DEBUG] Split into ${paragraphs.length} paragraphs`);
+    }
+    
+    const processedParagraphs = paragraphs.map((paragraph, index) => {
+      let processedParagraph = paragraph;
+      
+      for (const processor of modules) {
+        try {
+          if (processor.processParagraph) {
+            const result = processor.processParagraph(processedParagraph);
+            if (typeof result === "string") {
+              processedParagraph = result;
+            }
+          }
+        } catch (error) {
+          console.error(`Error in ${processor.constructor.name} processParagraph:`, error);
+        }
+      }
+      
+      return processedParagraph;
+    });
+    
+    const finalText = processedParagraphs.join('\\n\\n');
+    
+    // Append tiddlers from each processor
+    for (const processor of modules) {
+      try {
+        if (processor.appendTiddlers) {
+          processor.appendTiddlers(tiddlers);
+        }
+      } catch (error) {
+        console.error(`Error appending tiddlers from ${processor.constructor.name}:`, error);
+      }
+    }
+    
+    return {
+      processedText: finalText,
+      tiddlers: Array.from(tiddlers.values()),
+      modules: modules.map((m) => m.constructor.name)
+    };
+  }
+  
+  // Expose to window
+  if (typeof window !== 'undefined') {
+    window.processLaTeX = processLaTeX;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
+// UI Functions
+let currentResult = null;
+
+async function uiProcessLaTeX() {
+    const latex = document.getElementById('latexInput').value;
+    const output = document.getElementById('output');
+    const status = document.getElementById('status');
+    const downloadBtn = document.getElementById('downloadBtn');
+    
+    status.textContent = 'Processing LaTeX...';
+    status.className = 'status';
+    output.textContent = '';
+    downloadBtn.style.display = 'none';
+    
+    try {
+        if (!window.processLaTeX) {
+            throw new Error('LATW not properly loaded');
+        }
+        
+        const result = await window.processLaTeX(latex, {
+            bibkey: 'latw-' + Date.now(),
+            config: [
+                { classname: 'LATW', tags: '' },
+                        { classname: 'SectionScanner', tags: '' },
+                        { classname: 'FormulaScanner', tags: '' },
+                        { classname: 'BibliographyModule', tags: '' },
+                        { classname: 'TableScanner', tags: '' },
+                        { classname: 'ReferenceScanner', tags: '' },
+                        { classname: 'MacroScanner', tags: '' },
+                        { classname: 'GraphicsScanner', tags: '' },
+                        { classname: 'TikzScanner', tags: '' },
+                        { classname: 'LATW', tags: '' },
+                        { classname: 'DocumentHeaderModule', tags: '' },
+                        { classname: 'ParagraphScanner', tags: '' }
+            ],
+            debug: true
+        });
+        
+        currentResult = result;
+        status.textContent = '✅ Created ' + result.tiddlers.length + ' tiddlers';
+        status.className = 'status success';
+        output.textContent = JSON.stringify(result.tiddlers, null, 2);
+        downloadBtn.style.display = 'inline-block';
+        
+        console.log('Processing complete:', result);
+        
+    } catch (error) {
+        status.textContent = '❌ Error: ' + error.message;
+        status.className = 'status error';
+        output.textContent = error.stack || error.toString();
+        console.error('Processing failed:', error);
+    }
+}
+
+function downloadJSON() {
+    if (!currentResult) return;
+    
+    const dataStr = JSON.stringify(currentResult.tiddlers, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tiddlers_' + Date.now() + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Check if LATW is loaded
+window.addEventListener('load', () => {
+    const status = document.getElementById('status');
+    if (window.LATW && window.processLaTeX) {
+        status.textContent = '✅ LATW loaded successfully! Ready to convert.';
+        status.className = 'status success';
+    } else {
+        status.textContent = '❌ LATW failed to load. Check console for errors.';
+        status.className = 'status error';
+    }
+});
+
+
+
+</script>
+<!-- EXPLO END: main-script.js -->
+</body>
+</html>
+
+

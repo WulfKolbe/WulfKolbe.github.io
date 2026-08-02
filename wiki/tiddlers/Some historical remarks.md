@@ -1,5 +1,4 @@
-```markdown
-Dear User,
+# Dear User,
 
 After retiring in 2024, I set out to make a series of four German books on a new Quantum Field Theory (written around 1970) more accessible to the scientific community by translating them into English.
 
@@ -11,6 +10,9 @@ I then evaluated all available OCR tools — both free and commercial — and ch
 While searching for ways to compare, edit, correct, and preview math expressions, I repeatedly encountered KaTeX in combination with HTML. That led me to Tiddlywiki, where I was immediately fascinated by Jeremy Ruston’s JavaScript style and his commitment to simplicity. His concept of **transclusions** instantly made sense to me: with just a single function definition and a CSV-like file of formulas, I had transclusions working in LaTeX.
 
 LaTeX alone, however, could not render the math expressions inline. I therefore started importing formulas into Tiddlywiki and using **templated transclusions** for math. I soon realised that templated transclusions had a much broader application — they could elegantly handle bibliographic references, images, footnotes, and more.
+
+## First automatic translation
+Using transclusions allowed me to pipe Tiddlwiki Tiddler through the translations service Deepl.com and the resulting Tiddler had a text field with English language and an additional field "org_text" that could be displayed with a short macro together with the translation.
 
 ## Background and efficiency
 
@@ -43,10 +45,11 @@ Jeremy Ruston’s “Tiddlyspace” idea can also be adapted: storing only the h
 For LLM processing, I now use a custom format that uses only a single token between records. Standard JSON wastes a token for every quote and colon.  
 Instead, I use a delimiter‑based structure:
 
+```
 %%%%
 Title
 Text
 %%%%
+```
 
 This reduces token consumption significantly when passing structured data to a language model.
-```

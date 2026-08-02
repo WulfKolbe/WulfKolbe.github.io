@@ -2,6 +2,7 @@
 tied to rewards, triage rules, and explicit consent. 
 Existing AI/security bounty programs already show that providers will pay for reports when they are reproducible, scoped, and useful, while platforms are also tightening rules against vague AI-generated spam. [bugcrowd](https://www.bugcrowd.com/blog/bugcrowd-policy-changes-to-address-ai-slop-submissions/)
 
+
 ## Core concept
 
 What you are describing is a hybrid of three things: a support chat, a bug report form, and a responsible disclosure program. A practical version would let the user escalate a bad CLI outcome into a special chat mode that bundles the transcript, stderr/stdout, command history, environment metadata, and optionally a public repo link, then sends it for provider review under a reward policy. [nym](https://nym.com/vdp-bbp)
