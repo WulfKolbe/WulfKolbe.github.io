@@ -1,3 +1,5 @@
+created: 20260802150503785
+modified: 20260802150503785
 tags: 
 title: drillui
 type: text/vnd.tiddlywiki
@@ -18,15 +20,28 @@ type: text/vnd.tiddlywiki
 
 \function drillui.which() [<drillui.hostname>regexp[\.app\.github\.dev$]then[codespace (derived from this wiki's host)]] ~[<drillui.hostname>regexp[cocalc]then[cocalc (derived from this wiki's path)]] ~[<drillui.hostname>regexp[^(localhost|127\.0\.0\.1)$]then[localhost]] ~[cocalc (bookmarked — this wiki is elsewhere)]
 
-\function drillui.url() [{$:/drillui/bridge}!match[]] ~[<drillui.auto>]
-\function drillui.pinned() [{$:/drillui/bridge}!match[]]
-\function drillui.mixed() [<drillui.protocol>match[https:]] :filter[<drillui.url>prefix[http://]]
+\function drillui.url() [{$:/temp/drillui/bridge}!match[]] ~[<drillui.auto>]
+\function drillui.pinned() [{$:/temp/drillui/bridge}!match[]]
+\function drillui.samesite() [<drillui.url>regexp[cocalc]] :filter[<drillui.url>!prefix<drillui.origin>]
+\function drillui.mixed() [<drillui.protocol>match[https:]] :filter[<drillui.url>prefix[http://]] :filter[<drillui.url>!prefix[http://localhost]] :filter[<drillui.url>!prefix[http://127.0.0.1]]
 
 <div class="drillui-bar">
 
-<$button tooltip="follow this wiki's own location"><$action-setfield $tiddler="$:/drillui/bridge" text=""/>auto</$button><$button tooltip={{{ [<drillui.route.localhost>] }}}><$action-setfield $tiddler="$:/drillui/bridge" text={{$:/drillui/route/localhost}}/>localhost</$button><$button tooltip={{{ [<drillui.route.cocalc>] }}}><$action-setfield $tiddler="$:/drillui/bridge" text={{$:/drillui/route/cocalc}}/>cocalc</$button><$button tooltip={{{ [<drillui.route.codespace>] }}}><$action-setfield $tiddler="$:/drillui/bridge" text={{{ [<drillui.route.codespace>] }}}/>codespace</$button><span class="drillui-which"><$text text={{{ [<drillui.pinned>then[pinned]] ~[<drillui.which>addprefix[auto: ]] }}}/></span><a href={{{ [<drillui.url>] }}} target="_blank" rel="noopener" class="drillui-tab">tab ↗</a>
+<$button tooltip="follow this wiki's own location"><$action-setfield $tiddler="$:/temp/drillui/bridge" text=""/>auto</$button><$button tooltip={{{ [<drillui.route.localhost>] }}}><$action-setfield $tiddler="$:/temp/drillui/bridge" text={{$:/drillui/route/localhost}}/>localhost</$button><$button tooltip={{{ [<drillui.route.cocalc>] }}}><$action-setfield $tiddler="$:/temp/drillui/bridge" text={{$:/drillui/route/cocalc}}/>cocalc</$button><$button tooltip={{{ [<drillui.route.codespace>] }}}><$action-setfield $tiddler="$:/temp/drillui/bridge" text={{{ [<drillui.route.codespace>] }}}/>codespace</$button><span class="drillui-which"><$text text={{{ [{$:/temp/drillui/bridge}!match[]addprefix[pinned: ]] ~[<drillui.which>addprefix[auto: ]] }}}/></span><a href={{{ [<drillui.url>] }}} target="_blank" rel="noopener" class="drillui-tab">tab ↗</a>
 
 </div>
+
+<$list filter="[<drillui.samesite>!match[]]" variable="ignore">
+
+<div class="drillui-warn">
+
+CoCalc's project-host proxy sets its session cookies with `SameSite=Lax`, which browsers send on a top-level navigation but never on a cross-site frame load. This wiki is not on that host, so the frame below will get ''401 unauthorized'' no matter which browser you use — the cookie is `HttpOnly`, so no script can supply it. A browser tab is a top-level navigation, which //does// carry a Lax cookie — so use the button below. Serving this wiki from the CoCalc host itself removes the problem entirely: the request is then same-site and the ''auto'' route derives the bridge URL with no configuration.
+
+<a href={{{ [<drillui.url>] }}} target="_blank" rel="noopener" class="drillui-open">open drillui in a new tab ↗</a>
+
+</div>
+
+</$list>
 
 <$list filter="[<drillui.mixed>!match[]]" variable="ignore">
 
@@ -38,12 +53,10 @@ This wiki is served over https, so the browser will refuse to embed <$text text=
 
 </$list>
 
-<$reveal type="nomatch" state="$:/drillui/bridge" text="" default="">
-<iframe class="drillui-frame" src={{{ [<drillui.url>] }}} frameborder="0" marginwidth="0" marginheight="0" allow="clipboard-read; clipboard-write"></iframe>
-</$reveal>
-
-<$list filter="[<drillui.pinned>match[]]" variable="ignore">
-<iframe class="drillui-frame" src={{{ [<drillui.auto>] }}} frameborder="0" marginwidth="0" marginheight="0" allow="clipboard-read; clipboard-write"></iframe>
+<$list filter="[<drillui.samesite>match[]]" variable="ignore">
+<$list filter="[{$:/temp/drillui/bridge}!match[]] ~[<drillui.auto>]" variable="drilluiURL">
+<iframe class="drillui-frame" src=<<drilluiURL>> frameborder="0" marginwidth="0" marginheight="0" allow="clipboard-read; clipboard-write"></iframe>
+</$list>
 </$list>
 
 <div class="drillui-foot">

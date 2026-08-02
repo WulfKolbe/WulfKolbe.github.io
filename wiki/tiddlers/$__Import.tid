@@ -5,7 +5,6 @@ type: text/vnd.tiddlywiki
 The following tiddlers were imported:
 
 # [[drillui]]
-# [[$:/drillui/bridge]]
 # [[$:/drillui/route/localhost]]
 # [[$:/drillui/route/cocalc]]
 # [[$:/drillui/style/drillui]]
