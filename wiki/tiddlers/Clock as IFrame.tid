@@ -1,0 +1,13 @@
+created: 20230904135704150
+creator: wkolbe
+modified: 20260802122954698
+modifier: wkolbe
+tags: 
+title: Clock as IFrame
+type: text/vnd.tiddlywiki
+
+<iframe src="https://widgets.worldtimeserver.com/Clock.aspx?theme=Analog&wtsid=DE&hex=0040ff&city=Berlin&size=smal" frameborder="0"  width="210"  height="230" marginwidth="0" marginheight="0" scrolling="no" style="border:3px solid #666; margin-bottom:3px;">
+ </iframe>
+
+
+See also https://github.com/RolandR/bahnhofsuhr/blob/master/bahnhofsuhr.js

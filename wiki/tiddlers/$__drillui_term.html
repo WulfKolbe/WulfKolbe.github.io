@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>drillui · bridge frame</title>
+<!-- drillui_tw.html — the TiddlyWiki-side SHIM.
+
+     It deliberately contains NO terminal, NO WebSocket and NO knowledge of the
+     bridge protocol. The bridge already serves drillui_term.html at `/`, and
+     that page derives its WS URL, artifact base and CoCalc proxy route from its
+     own `location` (drillui_term.html: defaultWsUrl / artifactUrl). Loading it
+     FROM the bridge into this frame keeps all of that working and keeps every
+     fetch it makes same-origin to the bridge — which is what makes the bridge's
+     missing Access-Control-Allow-Origin header irrelevant.
+
+     This file's whole job is the three things a bare iframe cannot do:
+       1. let you retarget the bridge URL without editing the tiddler,
+       2. turn a silent mixed-content blank into a stated reason,
+       3. say out loud that reloading the frame restarts the REPL
+          (drillui_bridge.ts spawns one process per WebSocket and kills it on
+          close), and offer a real tab as the escape hatch.
+
+     The bridge URL placeholder below occurs exactly once and is substituted by
+     tw_wrap.py --bridge; left literal, the field starts empty. -->
+<style>
+  :root{ --bg:#1d2021; --panel:#282828; --line:#3c3836; --fg:#ebdbb2;
+         --dim:#a89984; --faint:#928374; --green:#b8bb26; --orange:#fe8019;
+         --red:#fb4934; --blue:#83a598;
+         --mono:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{ background:var(--bg); color:var(--fg); font-family:var(--mono);
+        font-size:12.5px; display:flex; flex-direction:column; height:100vh; }
+  #bar{ display:flex; align-items:center; gap:6px; padding:6px 8px;
+        background:var(--panel); border-bottom:1px solid var(--line); flex:0 0 auto; }
+  #bar .tag{ color:var(--orange); font-weight:700; }
+  input{ flex:1 1 auto; min-width:80px; background:var(--bg); color:var(--fg);
+         border:1px solid var(--line); border-radius:5px; padding:4px 8px;
+         font-family:var(--mono); font-size:12.5px; }
+  button,a.btn{ background:var(--bg); color:var(--fg); border:1px solid var(--line);
+        border-radius:5px; padding:4px 10px; font-family:var(--mono); font-size:12.5px;
+        cursor:pointer; text-decoration:none; white-space:nowrap; }
+  button:hover,a.btn:hover{ border-color:var(--blue); }
+  #note{ padding:4px 10px; font-size:11.5px; color:var(--faint); flex:0 0 auto;
+         border-bottom:1px solid var(--line); }
+  #note.err{ color:var(--red); }
+  #note.ok{ color:var(--green); }
+  #stage{ flex:1 1 auto; min-height:0; position:relative; }
+  iframe{ width:100%; height:100%; border:0; display:block; background:var(--bg); }
+  #blank{ position:absolute; inset:0; display:none; padding:18px 20px;
+          color:var(--dim); line-height:1.6; overflow:auto; }
+  #blank.show{ display:block; }
+  #blank b{ color:var(--fg); }
+  code{ color:var(--blue); }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <span class="tag">drillui</span>
+  <input id="url" spellcheck="false" placeholder="https://…/server/8787/  — the bridge base URL" />
+  <button id="load" type="button">load</button>
+  <button id="reload" type="button" title="destroys the frame: the bridge kills the REPL process and a new one is spawned">reload ⟳</button>
+  <a id="tab" class="btn" target="_blank" rel="noopener">tab ↗</a>
+</div>
+
+<div id="note"></div>
+
+<div id="stage">
+  <iframe id="frame" title="drillui terminal"
+          allow="clipboard-read; clipboard-write"></iframe>
+  <div id="blank">
+    <p><b>Nothing loaded.</b> Enter the bridge base URL above and press <b>load</b>.</p>
+    <p>That is the URL where <code>bun run tools/drillui_bridge.ts</code> serves
+       its terminal page — the same URL you would open in a browser tab:</p>
+    <p>local: <code>http://localhost:8787/</code><br>
+       CoCalc: <code>https://cocalc.ai/&lt;project-id&gt;/server/8787/</code></p>
+    <p>If the panel stays blank <i>after</i> loading, the frame was refused. Press
+       <b>tab&nbsp;↗</b> — a real tab shows the actual error the frame swallows.</p>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+var BRIDGE = "https://cocalc.ai/PROJECT-ID/server/8787/";
+if (BRIDGE.indexOf("__") === 0) BRIDGE = "";
+
+var urlEl = document.getElementById("url"),
+    frame = document.getElementById("frame"),
+    note  = document.getElementById("note"),
+    blank = document.getElementById("blank"),
+    tab   = document.getElementById("tab");
+
+function say(kind, text){ note.className = kind; note.textContent = text; }
+
+function normalise(raw){
+  var s = String(raw || "").trim();
+  if (!s) return "";
+  if (!/^https?:\/\//i.test(s)) s = (window.isSecureContext ? "https://" : "http://") + s;
+  if (!/\/$/.test(s) && !/\.[a-z0-9]+$/i.test(s.split("/").pop())) s += "/";
+  return s;
+}
+
+function load(raw){
+  var url = normalise(raw);
+  tab.href = url || "#";
+  if (!url){
+    frame.removeAttribute("src");
+    blank.classList.add("show");
+    say("", "no bridge URL set");
+    return;
+  }
+  // A secure context may not embed http:// — the browser blocks it and leaves a
+  // blank frame with no visible reason. State it instead of showing the blank.
+  if (window.isSecureContext && /^http:\/\//i.test(url)){
+    frame.removeAttribute("src");
+    blank.classList.add("show");
+    say("err", "mixed content: this wiki is served over https, so an http:// bridge "
+      + "cannot be embedded. Use the https/wss proxied URL (CoCalc: "
+      + "https://cocalc.ai/<project>/server/8787/), or open the wiki over http.");
+    return;
+  }
+  blank.classList.remove("show");
+  say("", "loading " + url + " …");
+  frame.src = url;
+}
+
+frame.addEventListener("load", function(){
+  // Cross-origin: the load event carries no status and no access to the document.
+  // It fires for an error page too, so this is "the frame navigated", not "the
+  // bridge answered". The visible panel is the real verdict.
+  say("ok", "frame navigated · a live session holds one REPL process — closing or "
+    + "reloading this tiddler ends it (bridge spawns per WebSocket)");
+});
+
+document.getElementById("load").onclick = function(){ load(urlEl.value); };
+urlEl.addEventListener("keydown", function(e){ if (e.key === "Enter") load(urlEl.value); });
+document.getElementById("reload").onclick = function(){
+  if (frame.getAttribute("src")) load(urlEl.value || frame.getAttribute("src"));
+};
+
+urlEl.value = BRIDGE;
+load(BRIDGE);
+</script>
+</body>
+</html>

@@ -4,4 +4,7 @@ type: text/vnd.tiddlywiki
 
 The following tiddlers were imported:
 
-# [[README.md]]
+# [[drillui]]
+# [[$:/drillui/bridge]]
+# [[$:/drillui/bridge/draft]]
+# [[$:/drillui/style/drillui]]
